@@ -1,0 +1,24 @@
+/* Base element styles — all colors/fonts via --ak-* tokens. */
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  font: 400 13px/1.6 var(--ak-font-mono);
+  color: var(--ak-text);
+  background: var(--ak-bg);
+  -webkit-font-smoothing: antialiased;
+}
+/* ponytail: dropped the HTML's height:100vh/overflow:hidden/user-select:none
+   — that's desktop-shell behavior, not site-wide. Re-add per page if needed. */
+
+h1, h2, h3, p, ul { margin: 0; }
+
+a { color: var(--ak-accent); }
+
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+
+::selection { background: var(--ak-accent); color: var(--ak-bg); }
+
+:focus-visible { outline: 2px solid var(--ak-accent); outline-offset: 2px; }

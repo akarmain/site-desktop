@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>akarmain — рабочий стол</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0d10;
+  --panel: #131318;
+  --panel2: #18181f;
+  --line: #232329;
+  --line2: #2e2e38;
+  --ink: #d6d4de;
+  --mu: #8d8a99;
+  --dim: #6e6b7c;
+  --accent: #8b7ef8;
+  --green: #7fd49a;
+  --gold: #d4b06a;
+  --sans: 'Space Grotesk', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  height: 100vh; overflow: hidden;
+  font: 400 13px/1.6 var(--mono); color: var(--ink);
+  background: var(--bg);
+  image-rendering: auto;
+  -webkit-font-smoothing: antialiased; user-select: none;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18'%3E%3Cpath d='M2 1 L2 14 L5.5 10.5 L8 16 L10 15 L7.5 9.5 L12 9.5 Z' fill='%23d6d4de' stroke='%230d0d10' stroke-width='1'/%3E%3C/svg%3E") 2 1, auto;
+}
+button, a { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18'%3E%3Cpath d='M2 1 L2 14 L5.5 10.5 L8 16 L10 15 L7.5 9.5 L12 9.5 Z' fill='%238b7ef8' stroke='%230d0d10' stroke-width='1'/%3E%3C/svg%3E") 2 1, pointer; }
+a { color: var(--accent); }
+h1,h2,h3,p,ul { margin: 0; }
+::selection { background: var(--accent); color: #0d0d10; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; }
+
+.notch { clip-path: polygon(0 3px, 3px 3px, 3px 0, calc(100% - 3px) 0, calc(100% - 3px) 3px, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 3px calc(100% - 3px), 0 calc(100% - 3px)); }
+.dither {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect x='0' y='0' width='1' height='1' fill='%232e2e38'/%3E%3Crect x='2' y='2' width='1' height='1' fill='%232e2e38'/%3E%3C/svg%3E");
+  image-rendering: pixelated;
+}
+.px-icon { image-rendering: pixelated; display: block; flex: none; }
+.ambient-noise {
+  position: fixed; inset: 0; width: 100vw; height: 100vh;
+  z-index: 0; pointer-events: none; image-rendering: pixelated;
+  opacity: .58; mix-blend-mode: lighten;
+  filter: contrast(1.02) saturate(.94);
+}
+
+/* ── меню-бар ── */
+.menubar {
+  position: fixed; top: 0; left: 0; right: 0; height: 38px;
+  background: var(--panel); border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; padding: 0 6px; z-index: 500;
+  font: 400 12px/1 var(--mono);
+}
+.menubar .logo { font: 500 12.5px/1 var(--sans); padding: 0 12px; color: var(--ink); display: inline-flex; align-items: center; gap: 8px; }
+.menubar .brand-mark { width: 18px; height: 18px; border: 1px solid var(--line2); background: var(--bg); display: grid; place-items: center; overflow: hidden; flex: none; }
+.menubar .brand-mark img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.menubar button { color: var(--mu); padding: 12px 11px; transition: color 120ms; }
+.menubar button:hover { color: var(--ink); }
+.menubar .right { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--dim); padding-right: 8px; }
+.menubar .right button { padding: 0; font-size: 11px; color: var(--dim); }
+.menubar .right button:hover { color: var(--ink); }
+.menubar .right button { white-space: nowrap; }
+.settings-gear { width: 28px; height: 28px; border: 1px solid var(--line); display: grid; place-items: center; }
+.settings-gear:hover { border-color: var(--line2); background: var(--panel2); }
+.settings-gear svg { width: 15px; height: 15px; display: block; }
+@media (max-width: 900px) { .menubar .mb-extra { display: none; } }
+
+/* ── окна ── */
+.win {
+  position: absolute; background: var(--panel); border: 1px solid var(--line);
+  min-width: 240px; display: flex; flex-direction: column;
+  transform-origin: center center;
+  transition: border-color 120ms, box-shadow 140ms, transform 120ms;
+}
+.win.focus { border-color: var(--line2); box-shadow: 0 16px 48px rgba(0,0,0,.55); transform: translateY(-2px); }
+.win.is-interacting { transition: none; }
+.win.is-interacting.focus { transform: none; }
+.win.focus.min { transform: none; }
+@keyframes winIn { from { opacity: 0; transform: scale(.9) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes winOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(.9) translateY(8px); } }
+.win.anim-in { animation: winIn 200ms cubic-bezier(.2,.9,.3,1.2); }
+.win.anim-out { animation: winOut 150ms ease-in forwards; }
+.win-head {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 12px;
+  font: 400 11.5px/1 var(--mono); color: var(--mu);
+  border-bottom: 1px solid var(--line); cursor: grab; flex: none;
+}
+.win-head:active { cursor: grabbing; }
+.win-head > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; max-width: 70%; }
+.win-head .grow { flex: 1; align-self: stretch; }
+.win-head .grow.dither { opacity: .3; }
+.win-head .wbtn { color: var(--dim); padding: 3px 6px; transition: color 120ms, background 120ms; font-size: 13px; line-height: 1; }
+.win-head .wbtn:hover { color: var(--ink); background: var(--panel2); }
+.win-body { padding: 18px 20px; overflow: auto; user-select: text; flex: 1 1 auto; min-height: 0; }
+.win.min .win-body, .win.min .win-status, .win.min .term-wrap, .win.min .win-resize { display: none; }
+.win.min .win-head { border-bottom: 0; }
+.win.closed { display: none; }
+/* ручки ресайза — 8 направлений */
+.win-edge { position: absolute; z-index: 5; }
+.win-edge.n { top: -4px; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+.win-edge.s { bottom: -4px; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+.win-edge.w { left: -4px; top: 8px; bottom: 8px; width: 8px; cursor: ew-resize; }
+.win-edge.e { right: -4px; top: 8px; bottom: 8px; width: 8px; cursor: ew-resize; }
+.win-edge.nw { top: -4px; left: -4px; width: 12px; height: 12px; cursor: nwse-resize; }
+.win-edge.ne { top: -4px; right: -4px; width: 12px; height: 12px; cursor: nesw-resize; }
+.win-edge.sw { bottom: -4px; left: -4px; width: 12px; height: 12px; cursor: nesw-resize; }
+.win-edge.se { bottom: -4px; right: -4px; width: 16px; height: 16px; cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 0 50%, var(--line2) 50% 60%, transparent 60% 72%, var(--line2) 72% 82%, transparent 82%);
+}
+.win-edge.se:hover { background: linear-gradient(135deg, transparent 0 50%, var(--accent) 50% 60%, transparent 60% 72%, var(--accent) 72% 82%, transparent 82%); }
+
+/* ── контакты (профиль + bento) ── */
+.contact-layout { display: flex; gap: 0; height: 100%; }
+.contact-profile {
+  flex: none; width: 100%; padding: 4px 0 0;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  transition: width 120ms ease;
+}
+.win.expanded .contact-profile { width: 280px; border-right: 1px solid var(--line); padding-right: 16px; }
+.win.expanded .win-body { min-height: 420px; }
+
+.profile-hero { position: relative; margin-bottom: 16px; }
+.profile-hero .avatar-wrap {
+  position: relative; width: 96px; height: 96px;
+  border-radius: 50%; overflow: hidden;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 24px rgba(139,126,248,.35), 0 8px 32px rgba(0,0,0,.4);
+  animation: avatarPulse 3s ease-in-out infinite;
+}
+@keyframes avatarPulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--accent), 0 0 24px rgba(139,126,248,.35), 0 8px 32px rgba(0,0,0,.4); }
+  50% { box-shadow: 0 0 0 3px var(--accent), 0 0 40px rgba(139,126,248,.55), 0 8px 32px rgba(0,0,0,.4); }
+}
+.profile-hero .avatar { width: 100%; height: 100%; object-fit: cover; display: block; }
+.profile-hero .status {
+  position: absolute; bottom: 2px; right: 2px;
+  width: 14px; height: 14px; background: var(--green);
+  border: 2px solid var(--panel); border-radius: 50%;
+  animation: statusBlink 2s ease-in-out infinite;
+}
+@keyframes statusBlink { 0%, 100% { opacity: 1; } 50% { opacity: .6; } }
+.profile-name { font: 600 22px/1.2 var(--sans); letter-spacing: -.01em; margin-bottom: 4px; }
+.profile-role { font: 400 11px/1.4 var(--mono); color: var(--accent); margin-bottom: 14px; }
+.profile-bio { font: 400 12px/1.7 var(--mono); color: var(--mu); max-width: 32ch; margin-bottom: 16px; }
+.profile-bio b { color: var(--ink); font-weight: 500; }
+
+/* социальные иконки */
+.social-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 12px; }
+.social-btn {
+  width: 40px; height: 40px; border: 1px solid var(--line2); background: var(--panel2);
+  display: grid; place-items: center; color: var(--mu);
+  text-decoration: none; transition: all 140ms;
+}
+.social-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(139,126,248,.08); transform: translateY(-2px); }
+.social-btn svg { width: 18px; height: 18px; }
+
+/* кнопка «ещё» */
+.more-links-btn {
+  font: 400 10.5px/1 var(--mono); color: var(--dim); border: 1px solid var(--line);
+  padding: 6px 14px; background: none; transition: all 120ms; margin-bottom: 8px;
+}
+.more-links-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* bento-сетка справа */
+.bento-panel {
+  display: none; flex: 1; padding: 4px 0 0 16px; overflow: auto;
+}
+.win.expanded .bento-panel { display: flex; flex-direction: column; animation: bentoIn 300ms ease-out; }
+@keyframes bentoIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 72px;
+  gap: 10px;
+}
+.bento-item {
+  border: 1px solid var(--line2); background: var(--panel2);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  text-decoration: none; color: var(--mu); font: 400 10px/1 var(--mono);
+  transition: all 160ms; position: relative; overflow: hidden;
+}
+.bento-item:hover {
+  border-color: var(--accent); color: var(--ink);
+  background: rgba(139,126,248,.06);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(139,126,248,.2);
+}
+.bento-item svg { width: 24px; height: 24px; transition: transform 160ms; }
+.bento-item:hover svg { transform: scale(1.1); }
+.bento-item.lg { grid-column: span 2; }
+.bento-item.xl { grid-column: span 2; grid-row: span 2; }
+.bento-item.tall { grid-row: span 2; }
+.bento-item.work { border-color: #e05555; }
+.bento-item.work:hover { border-color: #ff6b6b; box-shadow: 0 4px 20px rgba(224,85,85,.25); }
+.bento-item.code { border-color: var(--accent); }
+.bento-item.hobby { border-color: var(--green); }
+.bento-item.hobby:hover { border-color: #9ae6b4; box-shadow: 0 4px 20px rgba(127,212,154,.25); }
+
+/* legacy */
+.me { display: flex; gap: 14px; align-items: center; }
+.me img { width: 64px; height: 64px; border: 1px solid var(--line2); object-fit: cover; image-rendering: pixelated; }
+.me h1 { font: 600 21px/1.15 var(--sans); letter-spacing: -.01em; }
+.me .role { font: 400 11px/1.5 var(--mono); color: var(--accent); margin-top: 4px; }
+.about-txt { margin-top: 14px; color: var(--mu); font-size: 12.5px; line-height: 1.7; }
+.about-txt b { color: var(--ink); font-weight: 500; }
+.facts { margin: 14px 0 0; padding: 0; list-style: none; font-size: 11.5px; color: var(--mu); }
+.facts li { padding: 3px 0; }
+.facts li::before { content: '▪ '; color: var(--accent); font-size: 9px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.chip { font: 400 10.5px/1 var(--mono); color: var(--mu); border: 1px solid var(--line2); padding: 4px 8px; }
+
+/* ── файлы / проекты ── */
+.files { display: flex; flex-direction: column; margin: -6px -8px; }
+.file {
+  display: grid; grid-template-columns: 26px 1fr auto auto; gap: 12px; align-items: center;
+  padding: 10px 8px; border-bottom: 1px solid var(--line);
+  text-decoration: none; color: var(--ink); transition: background 120ms; text-align: left;
+}
+.file:hover { background: var(--panel2); }
+.file:last-child { border-bottom: 0; }
+.file .nm b { display: block; font: 500 12.5px/1.4 var(--sans); }
+.file .nm span { font-size: 10.5px; color: var(--dim); }
+.file .meta { font-size: 10.5px; color: var(--dim); text-align: right; }
+.badge { font: 400 10px/1 var(--mono); padding: 3px 7px; }
+.badge.prod { color: var(--green); background: rgba(127,212,154,.08); }
+.badge.wip { color: var(--gold); background: rgba(212,176,106,.08); }
+.badge.arch { color: var(--dim); background: rgba(92,89,104,.12); }
+
+/* ── стек ── */
+.stack-grp { margin-bottom: 14px; }
+.stack-grp:last-child { margin-bottom: 0; }
+.stack-grp h3 { font: 500 10px/1 var(--mono); color: var(--dim); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 8px; }
+.stack-grp h3 i { font-style: normal; color: var(--accent); }
+
+/* ── услуги ── */
+.svc { display: flex; flex-direction: column; }
+.svc > div { padding: 9px 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 16px 1fr; gap: 10px; }
+.svc > div:last-child { border-bottom: 0; }
+.svc b { font: 500 12.5px/1.4 var(--sans); display: block; }
+.svc span { font-size: 10.5px; color: var(--dim); }
+.svc .sq { width: 8px; height: 8px; background: var(--accent); margin-top: 5px; }
+
+/* ── опыт / timeline ── */
+.tl { display: flex; flex-direction: column; }
+.tl > div { display: grid; grid-template-columns: 86px 1fr; gap: 14px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.tl > div:last-child { border-bottom: 0; }
+.tl .yr { font-size: 10.5px; color: var(--accent); padding-top: 2px; }
+.tl b { font: 500 12.5px/1.4 var(--sans); display: block; }
+.tl span { font-size: 10.5px; color: var(--dim); }
+
+/* ── терминал ── */
+.term-wrap { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; background: #0a0a0d; }
+.term-body { font: 400 12px/1.9 var(--mono); padding: 14px 16px 4px; color: var(--mu); user-select: text; flex: 1 1 auto; min-height: 0; overflow: auto; }
+.term-body .p { color: var(--accent); }
+.term-body .ok { color: var(--green); }
+.term-body .c { color: var(--dim); }
+.term-body .err { color: #e08a8a; }
+.term-body .out { white-space: pre-wrap; word-break: break-word; }
+.term-body .cmd { color: var(--ink); }
+.term-input-line { display: flex; align-items: baseline; gap: 8px; padding: 4px 16px 14px; font: 400 12px/1.7 var(--mono); }
+.term-input-line .ps { color: var(--green); flex: none; }
+.term-input-line input { flex: 1 1 auto; background: none; border: 0; outline: none; color: var(--ink); font: inherit; padding: 0; caret-color: var(--accent); min-width: 0; }
+.term-input-line input::placeholder { color: var(--dim); }
+#cursor { display: inline-block; width: 7px; height: 13px; background: var(--mu); vertical-align: -2px; margin-left: 2px; }
+
+/* ── контакт (contact card) ── */
+.contact-card { display: flex; flex-direction: column; align-items: center; padding: 8px 0 4px; }
+.contact-card .avatar { width: 88px; height: 88px; border: 1px solid var(--line2); object-fit: cover; margin-bottom: 12px; }
+.contact-card .name { font: 600 20px/1.2 var(--sans); letter-spacing: -.01em; margin-bottom: 2px; }
+.contact-card .role { font: 400 11px/1.4 var(--mono); color: var(--accent); margin-bottom: 16px; }
+.contact-actions { display: flex; gap: 12px; justify-content: center; margin-bottom: 16px; }
+.contact-action {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  text-decoration: none; color: var(--mu); transition: color 120ms;
+}
+.contact-action:hover { color: var(--ink); }
+.contact-action .ca-icon {
+  width: 42px; height: 42px; border: 1px solid var(--line2); background: var(--panel2);
+  display: grid; place-items: center; transition: border-color 120ms, background 120ms;
+}
+.contact-action:hover .ca-icon { border-color: var(--accent); background: rgba(139,126,248,.08); }
+.contact-action span { font: 400 10px/1 var(--mono); }
+.contact-rows { width: 100%; border-top: 1px solid var(--line); padding-top: 12px; margin-top: 4px; }
+.contact-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.contact-row:last-child { border-bottom: 0; }
+.contact-row .cr-label { font: 400 10px/1 var(--mono); color: var(--dim); width: 56px; flex: none; }
+.contact-row .cr-value { font: 400 12px/1.4 var(--mono); color: var(--ink); }
+.contact-row a { color: var(--accent); text-decoration: none; }
+.contact-row a:hover { text-decoration: underline; }
+
+/* legacy dlg fallback */
+.dlg { text-align: center; padding: 4px 2px 2px; }
+.dlg h2 { font: 600 17px/1.3 var(--sans); margin-bottom: 6px; }
+.dlg p { color: var(--mu); font-size: 12px; max-width: 32ch; margin: 0 auto 16px; }
+.dlg-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 36px; padding: 0 16px;
+  font: 500 12px/1 var(--mono); text-decoration: none;
+  background: var(--accent); color: #0d0d10; border: 1px solid var(--accent);
+  transition: background 120ms, border-color 120ms;
+}
+.btn:hover { background: #9d92fa; border-color: #9d92fa; }
+.btn:active { transform: translate(1px,1px); }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line2); }
+.btn.ghost:hover { background: var(--panel2); border-color: var(--dim); }
+.btn.quiet { background: transparent; color: var(--mu); border-color: transparent; }
+.btn.quiet:hover { color: var(--ink); background: var(--panel2); }
+
+/* ── иконки на столе ── */
+.desk-icons { position: fixed; top: 58px; right: 20px; display: flex; flex-direction: column; gap: 18px; z-index: 1; }
+.dicon { width: 86px; display: flex; flex-direction: column; align-items: center; gap: 7px; text-align: center; text-decoration: none; }
+.dicon .box {
+  width: 48px; height: 48px; border: 1px solid var(--line);
+  background: var(--panel); display: grid; place-items: center;
+  transition: border-color 120ms, background 120ms;
+}
+.dicon:hover .box { border-color: var(--accent); background: var(--panel2); transform: translateY(-2px); }
+.dicon .box { transition: border-color 120ms, background 120ms, transform 140ms; }
+.dicon:active .box { transform: translateY(0) scale(.94); }
+.dicon span { font: 400 10.5px/1.4 var(--mono); color: var(--mu); }
+.dicon:hover span { color: var(--ink); }
+
+/* ── док ── */
+.dock {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 4px; align-items: center; background: var(--panel); border: 1px solid var(--line);
+  padding: 6px 8px; z-index: 500;
+}
+.dock button { width: 54px; height: 54px; display: grid; place-items: center; position: relative; transition: background 120ms, transform 120ms cubic-bezier(.2,.9,.3,1.1); transform-origin: bottom center; }
+.dock button:hover { background: var(--panel2); }
+.dock-sep { width: 1px; height: 34px; background: var(--line2); flex: none; margin: 0 4px; }
+@keyframes dockBounce { 0% { transform: translateY(0) scale(var(--mag,1)); } 35% { transform: translateY(-16px) scale(var(--mag,1)); } 60% { transform: translateY(0) scale(var(--mag,1)); } 78% { transform: translateY(-5px) scale(var(--mag,1)); } 100% { transform: translateY(0) scale(var(--mag,1)); } }
+.dock button.bounce { animation: dockBounce 520ms ease-out; }
+.dock button::after { content: ''; position: absolute; bottom: 4px; left: 50%; width: 3px; height: 3px; transform: translateX(-50%); opacity: 0; background: var(--accent); }
+.dock button.open::after { opacity: .82; }
+.dock button.mini::after { opacity: .42; }
+.dock button::before {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 12px); left: 50%;
+  transform: translateX(-50%); white-space: nowrap;
+  background: var(--panel2); border: 1px solid var(--line2); color: var(--ink);
+  font: 400 10.5px/1 var(--mono); padding: 6px 9px;
+  opacity: 0; pointer-events: none; transition: opacity 120ms;
+}
+.dock button:hover::before { opacity: 1; }
+
+/* ── настройки окно ── */
+.cfg { display: flex; flex-direction: column; }
+.cfg-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); gap: 16px; }
+.cfg-row:last-child { border-bottom: 0; }
+.cfg-label { font: 400 12.5px/1 var(--sans); color: var(--ink); }
+.cfg-desc { font: 400 10.5px/1.5 var(--mono); color: var(--dim); margin-top: 3px; }
+.cfg-toggle { font: 400 11px/1 var(--mono); color: var(--mu); border: 1px solid var(--line2); padding: 6px 12px; background: none; cursor: inherit; transition: background 120ms, border-color 120ms, color 120ms; white-space: nowrap; min-width: 54px; text-align: center; }
+.cfg-toggle:hover { background: var(--panel2); border-color: var(--accent); color: var(--accent); }
+.cfg-toggle.on { background: rgba(139,126,248,.1); color: var(--accent); border-color: rgba(139,126,248,.4); }
+.cfg-choice { display: inline-flex; gap: 6px; padding: 2px; border: 1px solid var(--line); }
+.cfg-choice button { font: 400 10.5px/1 var(--mono); color: var(--mu); padding: 6px 9px; border: 1px solid transparent; }
+.cfg-choice button:hover { color: var(--ink); background: var(--panel2); }
+.cfg-choice button.on { color: var(--accent); border-color: rgba(139,126,248,.45); background: rgba(139,126,248,.1); }
+.cfg-sys { font: 400 10.5px/1.6 var(--mono); color: var(--dim); margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+
+.hint { position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%); font: 400 10.5px/1 var(--mono); color: var(--dim); z-index: 400; transition: opacity 600ms; }
+
+.empty {
+  position: fixed; inset: 0; display: none; place-items: center; z-index: 2;
+  font: 400 11.5px/1.8 var(--mono); color: var(--dim); text-align: center;
+}
+body.all-closed .empty { display: grid; }
+.empty i { font-style: normal; color: var(--accent); }
+
+.buildtag { position: fixed; bottom: 16px; left: 16px; font: 400 10.5px/1.6 var(--mono); color: var(--dim); z-index: 1; }
+
+@media (max-width: 760px) {
+  body { overflow: auto; height: auto; }
+  .stage { padding: 50px 0 90px; }
+  .win { position: static !important; margin: 12px; width: auto !important; height: auto !important; }
+  .win.closed { display: flex; }
+  .desk-icons, .hint, .buildtag, .empty { display: none; }
+  .win-head { cursor: default; }
+  .win-resize { display: none; }
+  .dock { max-width: calc(100vw - 20px); overflow-x: auto; overflow-y: hidden; justify-content: flex-start; -webkit-overflow-scrolling: touch; }
+  .dock button { flex: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-noise { display: none; }
+  .win.anim-in, .win.anim-out, .dock button.bounce { animation: none !important; }
+  .menubar .right .dot { animation: none; }
+  .win, .win.focus { transition: none; transform: none; }
+}
+
+/* ── светлая тема ── */
+:root[data-theme="light"] {
+  --bg: #eceaf3;
+  --panel: #ffffff;
+  --panel2: #f4f2fa;
+  --line: #e2def0;
+  --line2: #cec9de;
+  --ink: #1c1b24;
+  --mu: #56536a;
+  --dim: #8b8799;
+  --accent: #6d5de8;
+  --green: #2f9e63;
+  --gold: #b8893a;
+}
+:root[data-theme="light"] body {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18'%3E%3Cpath d='M2 1 L2 14 L5.5 10.5 L8 16 L10 15 L7.5 9.5 L12 9.5 Z' fill='%232a2833' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E") 2 1, auto;
+}
+:root[data-theme="light"] .win.focus { box-shadow: 0 14px 44px rgba(40,30,90,.15); }
+:root[data-theme="light"] .term-wrap, :root[data-theme="light"] .term-body { background: #f7f5fc; }
+:root[data-theme="light"] .badge.prod { background: rgba(47,158,99,.10); }
+:root[data-theme="light"] .badge.wip { background: rgba(184,137,58,.12); }
+:root[data-theme="light"] .badge.arch { background: rgba(120,116,140,.12); }
+:root[data-theme="light"] ::selection { background: var(--accent); color: #fff; }
+:root[data-theme="light"] .win-head .grow.dither { opacity: .14; }
+:root[data-theme="light"] .ambient-noise { opacity: .28; mix-blend-mode: multiply; filter: saturate(.82); }
+</style>
+<script>(function(){try{if(localStorage.getItem('akos-theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
+</head>
+<body>
+
+<canvas class="ambient-noise" id="ambientNoise" aria-hidden="true"></canvas>
+
+<div class="menubar" data-screen-label="Меню-бар">
+  <span class="logo">
+    <span class="brand-mark"><img src="assets/akarmain-logo.png" alt=""></span>
+    akarmain
+  </span>
+  <div class="right">
+    <span id="clock">--:--</span>
+    <button class="settings-gear" data-open="winSettings" title="Настройки" aria-label="Настройки">
+      <svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">
+        <g fill="currentColor">
+          <rect x="7" y="1" width="2" height="3"></rect><rect x="7" y="12" width="2" height="3"></rect>
+          <rect x="1" y="7" width="3" height="2"></rect><rect x="12" y="7" width="3" height="2"></rect>
+          <rect x="4" y="3" width="2" height="2"></rect><rect x="10" y="3" width="2" height="2"></rect>
+          <rect x="4" y="11" width="2" height="2"></rect><rect x="10" y="11" width="2" height="2"></rect>
+          <rect x="5" y="5" width="6" height="6"></rect>
+        </g>
+        <rect x="7" y="7" width="2" height="2" fill="var(--panel)"></rect>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<div class="stage">
+
+  <!-- контакты -->
+  <section class="win notch focus" id="winAbout" style="left: 4%; top: 58px; width: 340px; z-index: 30;" data-screen-label="Контакты">
+    <div class="win-head"><span>контакты.vcf</span><span class="grow dither"></span><button class="wbtn" data-min="winAbout" aria-label="Свернуть">—</button><button class="wbtn" data-close="winAbout" aria-label="Закрыть">×</button></div>
+    <div class="win-body">
+      <div class="contact-layout">
+        <!-- левая часть: профиль -->
+        <div class="contact-profile">
+          <div class="profile-hero">
+            <div class="avatar-wrap">
+              <img class="avatar" src="assets/akarmain-avatar.jpeg" alt="akarmain" width="192" height="192">
+            </div>
+            <span class="status" title="online"></span>
+          </div>
+          <div class="profile-name">Андрей Кармаев</div>
+          <div class="profile-role">fullstack-разработчик</div>
+          <p class="profile-bio">Моя жизнь в стиле «Мяу»<br><b>От идеи до прода</b> — за дни, не месяцы.</p>
+
+          <div class="social-row">
+            <a class="social-btn" href="https://t.me/akarmain" target="_blank" rel="noopener" title="Telegram">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M14.5 2.1 1.2 7.4c-.8.3-.8.9 0 1.1l3.3 1 1.3 4c.2.5.6.6 1 .3l1.8-1.5 3.5 2.6c.6.4 1.1.2 1.3-.6l2.4-11c.2-.9-.3-1.4-1.3-1.2zM5.7 8.9l5.9-3.6c.3-.2.5 0 .3.2l-4.9 4.4-.2 2.1-1.1-3.1z"/></svg>
+            </a>
+            <a class="social-btn" href="mailto:dev@akarmain.ru" title="Почта">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 4v8h14V4H1zm12.3 1L8 8.5 2.7 5h10.6zM2 11V6l6 4 6-4v5H2z"/></svg>
+            </a>
+            <a class="social-btn" href="https://github.com/akarmain" target="_blank" rel="noopener" title="GitHub">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 .5a7.5 7.5 0 0 0-2.4 14.6c.4.1.5-.2.5-.4v-1.4c-2.1.5-2.5-1-2.5-1-.3-.9-.8-1.1-.8-1.1-.7-.5 0-.5 0-.5.7.1 1.1.8 1.1.8.6 1.1 1.7.8 2.1.6 0-.5.2-.8.4-1-1.7-.2-3.4-.8-3.4-3.7 0-.8.3-1.5.8-2 0-.2-.3-1 .1-2 0 0 .6-.2 2 .8a7 7 0 0 1 3.6 0c1.4-1 2-.8 2-.8.4 1 .2 1.8.1 2 .5.5.8 1.2.8 2 0 2.9-1.7 3.5-3.4 3.7.3.2.5.7.5 1.4v2.1c0 .2.1.5.5.4A7.5 7.5 0 0 0 8 .5z"/></svg>
+            </a>
+          </div>
+
+          <button class="more-links-btn" id="moreLinksBtn">ещё ссылки →</button>
+        </div>
+
+        <!-- правая часть: bento-сетка -->
+        <div class="bento-panel" id="bentoPanel">
+          <div class="bento-grid">
+            <!-- работа (красные) -->
+            <a class="bento-item lg work" href="https://t.me/akarmain" target="_blank" rel="noopener" title="Telegram">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M14.5 2.1 1.2 7.4c-.8.3-.8.9 0 1.1l3.3 1 1.3 4c.2.5.6.6 1 .3l1.8-1.5 3.5 2.6c.6.4 1.1.2 1.3-.6l2.4-11c.2-.9-.3-1.4-1.3-1.2zM5.7 8.9l5.9-3.6c.3-.2.5 0 .3.2l-4.9 4.4-.2 2.1-1.1-3.1z"/></svg>
+              <span>telegram</span>
+            </a>
+            <a class="bento-item work" href="https://github.com/akarmain" target="_blank" rel="noopener" title="GitHub">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 .5a7.5 7.5 0 0 0-2.4 14.6c.4.1.5-.2.5-.4v-1.4c-2.1.5-2.5-1-2.5-1-.3-.9-.8-1.1-.8-1.1-.7-.5 0-.5 0-.5.7.1 1.1.8 1.1.8.6 1.1 1.7.8 2.1.6 0-.5.2-.8.4-1-1.7-.2-3.4-.8-3.4-3.7 0-.8.3-1.5.8-2 0-.2-.3-1 .1-2 0 0 .6-.2 2 .8a7 7 0 0 1 3.6 0c1.4-1 2-.8 2-.8.4 1 .2 1.8.1 2 .5.5.8 1.2.8 2 0 2.9-1.7 3.5-3.4 3.7.3.2.5.7.5 1.4v2.1c0 .2.1.5.5.4A7.5 7.5 0 0 0 8 .5z"/></svg>
+              <span>github</span>
+            </a>
+            <a class="bento-item tall code" href="https://gitlab.com/akarmain" target="_blank" rel="noopener" title="GitLab">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="m8 14.5-3.2-9.8h6.4L8 14.5zm-4-9.8L2.5 9.4l-.9 2.8c-.1.3 0 .6.3.8L8 14.5 4 4.7zm8 0 1.5 4.7.9 2.8c.1.3 0 .6-.3.8L8 14.5l4-9.8zm-8 0h6.4L8 1.5 6 4.7H4z"/></svg>
+              <span>gitlab</span>
+            </a>
+            <a class="bento-item lg code" href="https://www.linkedin.com/in/akarmain/" target="_blank" rel="noopener" title="LinkedIn">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3.5A1.5 1.5 0 1 1 5 3.5 1.5 1.5 0 0 1 2 3.5zM2 6h3v8H2V6zm5 0h2.8v1.1h0c.4-.7 1.3-1.4 2.7-1.4 2.9 0 3.4 1.9 3.4 4.4V14h-3v-3.5c0-.8 0-1.9-1.2-1.9s-1.4.9-1.4 1.8V14H7V6z"/></svg>
+              <span>linkedin</span>
+            </a>
+            <!-- соцсети (синие) -->
+            <a class="bento-item code" href="https://t.me/akarmain_log" target="_blank" rel="noopener" title="Блог">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM4 4h8v1H4V4zm0 2h8v1H4V6zm0 2h5v1H4V8z"/></svg>
+              <span>блог</span>
+            </a>
+            <a class="bento-item code" href="https://t.me/akarmain_live" target="_blank" rel="noopener" title="Live">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 3a5 5 0 1 0 0 10A5 5 0 0 0 8 3zm0 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/><circle cx="8" cy="8" r="1.5"/></svg>
+              <span>live</span>
+            </a>
+            <a class="bento-item hobby" href="https://discordapp.com/users/636565416260534302" target="_blank" rel="noopener" title="Discord">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.5 3S12 1.5 9.8 1.5l-.2.3c2 .5 2.9 1.2 3.9 2.1-1.7-.8-3.3-1.4-5.5-1.4s-3.8.6-5.5 1.4c1-.9 2-1.6 3.9-2.1l-.2-.3C4 1.5 2.5 3 2.5 3S.5 5.6.5 9.5c1.7 2 4.3 2 4.3 2l.5-.7c-.9-.3-1.9-.8-2.8-1.8 1 .8 2.6 1.5 5.5 1.5s4.5-.7 5.5-1.5c-.9 1-1.9 1.5-2.8 1.8l.5.7s2.6 0 4.3-2C15.5 5.6 13.5 3 13.5 3zM5.7 8.5c-.7 0-1.2-.6-1.2-1.4s.5-1.4 1.2-1.4 1.2.6 1.2 1.4-.5 1.4-1.2 1.4zm4.6 0c-.7 0-1.2-.6-1.2-1.4s.5-1.4 1.2-1.4 1.2.6 1.2 1.4-.5 1.4-1.2 1.4z"/></svg>
+              <span>discord</span>
+            </a>
+            <a class="bento-item hobby" href="https://www.youtube.com/@akrmain" target="_blank" rel="noopener" title="YouTube">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M14.4 4.6c-.2-.6-.7-1.1-1.3-1.3C11.9 3 8 3 8 3s-3.9 0-5.1.3c-.6.2-1.1.7-1.3 1.3C1.3 5.8 1.3 8 1.3 8s0 2.2.3 3.4c.2.6.7 1.1 1.3 1.3 1.2.3 5.1.3 5.1.3s3.9 0 5.1-.3c.6-.2 1.1-.7 1.3-1.3.3-1.2.3-3.4.3-3.4s0-2.2-.3-3.4zM6.6 10.2V5.8L10.2 8l-3.6 2.2z"/></svg>
+              <span>youtube</span>
+            </a>
+            <a class="bento-item hobby" href="https://steamcommunity.com/profiles/76561199222030536/" target="_blank" rel="noopener" title="Steam">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 0 0-6.9 5.8l3.7 1.5a2 2 0 0 1 1.1-.3l1.8-2.5v-.1a2.6 2.6 0 1 1 2.6 2.6h-.1L7.7 9.8a2 2 0 0 1-2 2.2 2 2 0 0 1-2-1.5L1.2 9.4A7 7 0 1 0 8 1zm-2.3 10a1.2 1.2 0 0 0 1.7-.5 1.2 1.2 0 0 0-.5-1.6l-.8-.3a1.5 1.5 0 0 1 1.9.2 1.5 1.5 0 0 1-1.3 2.5l-1-.3zm4.8-5a1.7 1.7 0 1 0 0-3.4 1.7 1.7 0 0 0 0 3.4z"/></svg>
+              <span>steam</span>
+            </a>
+            <a class="bento-item work" href="https://kwork.ru/user/akarmain" target="_blank" rel="noopener" title="Kwork">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 4h12v8H2V4zm1 1v6h10V5H3zm2 1h2v4H5V6zm3 0h2v4H8V6zm3 0h1v4h-1V6z"/></svg>
+              <span>kwork</span>
+            </a>
+            <a class="bento-item lg work" href="https://s3.akarmain.ru/S/CV.pdf" target="_blank" rel="noopener" title="CV">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 1v14h8V4l-3-3H4zm7 3H9V2l2 2zM5 14V2h3v3h3v9H5z"/></svg>
+              <span>резюме (CV)</span>
+            </a>
+            <a class="bento-item code" href="https://wakatime.com/@akarmain" target="_blank" rel="noopener" title="WakaTime">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 12.5a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11zM8 4v4l3 2-.6.9L7 8.5V4h1z"/></svg>
+              <span>wakatime</span>
+            </a>
+            <a class="bento-item hobby" href="https://www.tiktok.com/@akar_main" target="_blank" rel="noopener" title="TikTok">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M10.5 1h-2v9.5a2 2 0 1 1-2-2v-2a4 4 0 1 0 4 4V5.5c.6.3 1.3.5 2 .5v-2c-1.1 0-2-.9-2-2V1z"/></svg>
+              <span>tiktok</span>
+            </a>
+            <a class="bento-item hobby" href="https://www.twitch.tv/akarmain" target="_blank" rel="noopener" title="Twitch">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 1 1 4v9.5h3.5V15H6l1.5-1.5h2.5L14 9.5V1H2.5zm10 8L10 11.5H7L5.5 13v-1.5H3V2.5h9.5V9zM10 5v3h-1.5V5H10zm-3 0v3H5.5V5H7z"/></svg>
+              <span>twitch</span>
+            </a>
+            <a class="bento-item" href="https://t.me/anonquebot?start=tv3n9" target="_blank" rel="noopener" title="Анонимка">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 10c-1.7 0-3.2-.8-4.2-2 1-1.2 2.5-2 4.2-2s3.2.8 4.2 2c-1 1.2-2.5 2-4.2 2z"/></svg>
+              <span>анонимка</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- проекты -->
+  <section class="win notch closed" id="winWork" style="left: 36%; top: 104px; width: 470px; z-index: 12;" data-screen-label="Проекты">
+    <div class="win-head"><span>~/проекты</span><span class="grow dither"></span><button class="wbtn" data-min="winWork" aria-label="Свернуть">—</button><button class="wbtn" data-close="winWork" aria-label="Закрыть">×</button></div>
+    <div class="win-body">
+      <div class="files">
+        <a class="file" href="https://t.me/akarmain">
+          <svg class="px-icon" width="22" height="22" viewBox="0 0 16 16" shape-rendering="crispEdges"><g fill="#8b7ef8"><rect x="1" y="3" width="6" height="1"></rect><rect x="1" y="4" width="14" height="1"></rect><rect x="1" y="5" width="14" height="8"></rect></g><rect x="2" y="6" width="12" height="6" fill="#131318"></rect><rect x="2" y="7" width="12" height="5" fill="#8b7ef8"></rect></svg>
+          <span class="nm"><b>finbase — лендинг</b><span>next.js · vercel · 7 дней</span></span>
+          <span class="meta">конверсия +30%</span>
+          <span class="badge prod">prod</span>
+        </a>
+        <a class="file" href="https://t.me/akarmain">
+          <svg class="px-icon" width="22" height="22" viewBox="0 0 16 16" shape-rendering="crispEdges"><g fill="#8b7ef8"><rect x="1" y="2" width="14" height="12"></rect></g><rect x="2" y="3" width="12" height="10" fill="#0a0a0d"></rect><g fill="#7fd49a"><rect x="3" y="5" width="1" height="1"></rect><rect x="4" y="6" width="1" height="1"></rect><rect x="3" y="7" width="1" height="1"></rect><rect x="6" y="9" width="4" height="1"></rect></g></svg>
+          <span class="nm"><b>парсер каталога</b><span>fastapi · postgres · 10 дней</span></span>
+          <span class="meta">40k стр/сутки</span>
+          <span class="badge prod">prod</span>
+        </a>
+        <a class="file" href="https://t.me/akarmain">
+          <svg class="px-icon" width="22" height="22" viewBox="0 0 16 16" shape-rendering="crispEdges"><g fill="#8b7ef8"><rect x="1" y="1" width="14" height="14"></rect></g><rect x="2" y="2" width="12" height="12" fill="#131318"></rect><g fill="#8b7ef8"><rect x="2" y="2" width="12" height="3"></rect><rect x="2" y="6" width="3" height="8"></rect></g></svg>
+          <span class="nm"><b>дашборд логистики</b><span>react · supabase · realtime</span></span>
+          <span class="meta">в работе</span>
+          <span class="badge wip">wip</span>
+        </a>
+        <a class="file" href="https://t.me/akarmain">
+          <svg class="px-icon" width="22" height="22" viewBox="0 0 16 16" shape-rendering="crispEdges"><g fill="#8b7ef8"><rect x="2" y="2" width="12" height="9"></rect><rect x="4" y="11" width="3" height="2"></rect><rect x="3" y="13" width="2" height="1"></rect></g><rect x="3" y="3" width="10" height="7" fill="#0d0d10"></rect><g fill="#8b7ef8"><rect x="5" y="5" width="2" height="1"></rect><rect x="5" y="7" width="6" height="1"></rect></g></svg>
+          <span class="nm"><b>бот записи</b><span>grammY · cron · 5 дней</span></span>
+          <span class="meta">−80% рутины</span>
+          <span class="badge prod">prod</span>
+        </a>
+        <a class="file" href="https://t.me/akarmain">
+          <svg class="px-icon" width="22" height="22" viewBox="0 0 16 16" shape-rendering="crispEdges"><g fill="#8b7ef8"><rect x="1" y="2" width="14" height="12"></rect></g><rect x="2" y="3" width="12" height="10" fill="#131318"></rect><g fill="#8b7ef8"><rect x="4" y="5" width="8" height="1"></rect><rect x="4" y="7" width="8" height="1"></rect><rect x="4" y="9" width="5" height="1"></rect></g></svg>
+          <span class="nm"><b>mini crm</b><span>fastapi · react · docker</span></span>
+          <span class="meta">канбан + роли</span>
+          <span class="badge arch">arch</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- стек -->
+  <section class="win notch closed" id="winStack" style="left: 30%; top: 150px; width: 430px; z-index: 13;" data-screen-label="Стек">
+    <div class="win-head"><span>стек.json</span><span class="grow dither"></span><button class="wbtn" data-min="winStack" aria-label="Свернуть">—</button><button class="wbtn" data-close="winStack" aria-label="Закрыть">×</button></div>
+    <div class="win-body">
+      <div class="stack-grp">
+        <h3><i>backend</i></h3>
+        <div class="chips" style="margin: 0;"><span class="chip">python</span><span class="chip">fastapi</span><span class="chip">rest api</span><span class="chip">sqlalchemy</span><span class="chip">pydantic</span></div>
+      </div>
+      <div class="stack-grp">
+        <h3><i>frontend</i></h3>
+        <div class="chips" style="margin: 0;"><span class="chip">typescript</span><span class="chip">react</span><span class="chip">tailwind</span><span class="chip">html/css</span></div>
+      </div>
+      <div class="stack-grp">
+        <h3><i>базы данных</i></h3>
+        <div class="chips" style="margin: 0;"><span class="chip">postgresql</span><span class="chip">sqlite</span><span class="chip">redis</span></div>
+      </div>
+      <div class="stack-grp">
+        <h3><i>devops</i></h3>
+        <div class="chips" style="margin: 0;"><span class="chip">docker</span><span class="chip">compose</span><span class="chip">git</span><span class="chip">linux</span><span class="chip">nginx</span></div>
+      </div>
+      <div class="stack-grp">
+        <h3><i>ai / автоматизация</i></h3>
+        <div class="chips" style="margin: 0;"><span class="chip">ai-агенты</span><span class="chip">telegram-боты</span><span class="chip">интеграции api</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- услуги -->
+  <section class="win notch closed" id="winSvc" style="left: 14%; top: 190px; width: 450px; z-index: 14;" data-screen-label="Услуги">
+    <div class="win-head"><span>услуги.md</span><span class="grow dither"></span><button class="wbtn" data-min="winSvc" aria-label="Свернуть">—</button><button class="wbtn" data-close="winSvc" aria-label="Закрыть">×</button></div>
+    <div class="win-body">
+      <div class="svc">
+        <div><span class="sq"></span><div><b>Backend и REST API</b><span>архитектура, авторизация, документация</span></div></div>
+        <div><span class="sq"></span><div><b>Telegram-боты</b><span>от записи клиентов до сложных сценариев</span></div></div>
+        <div><span class="sq"></span><div><b>Парсеры и автоматизация</b><span>рутинные задачи — на автопилот</span></div></div>
+        <div><span class="sq"></span><div><b>MVP под ключ</b><span>идея → работающий продукт за дни</span></div></div>
+        <div><span class="sq"></span><div><b>Docker и деплой</b><span>настройка, CI, перенос на сервер</span></div></div>
+        <div><span class="sq"></span><div><b>Доработка проектов</b><span>интеграции, фиксы, новые фичи</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- опыт -->
+  <section class="win notch closed" id="winExp" style="left: 46%; top: 230px; width: 420px; z-index: 15;" data-screen-label="Опыт">
+    <div class="win-head"><span>опыт.log</span><span class="grow dither"></span><button class="wbtn" data-min="winExp" aria-label="Свернуть">—</button><button class="wbtn" data-close="winExp" aria-label="Закрыть">×</button></div>
+    <div class="win-body">
+      <div class="tl">
+        <div><span class="yr">2024–2026</span><div><b>Обучение в сфере IT</b><span>backend, frontend, devops — самостоятельно и в командах</span></div></div>
+        <div><span class="yr">2025</span><div><b>Фриланс и pet-проекты</b><span>боты, парсеры, лендинги — первые боевые заказы</span></div></div>
+        <div><span class="yr">2025–2026</span><div><b>Хакатоны и командные проекты</b><span>работа по спринтам, git-flow, код-ревью</span></div></div>
+        <div><span class="yr">сейчас</span><div><b>Коммерческие заказы</b><span>19 проектов сдано, фокус — MVP и автоматизация</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- терминал / как работаю -->
+  <section class="win notch closed" id="winTerm" style="left: 7%; top: 472px; width: 460px; z-index: 16;" data-screen-label="Терминал">
+    <div class="win-head"><span>терминал — как я работаю</span><span class="grow dither"></span><button class="wbtn" data-min="winTerm" aria-label="Свернуть">—</button><button class="wbtn" data-close="winTerm" aria-label="Закрыть">×</button></div>
+    <div class="term-wrap">
+      <div class="term-body" id="termOut">
+        <div><span class="c"># процесс — структурно, не хаотично</span></div>
+        <div><span class="p">1</span> обсуждение задачи и требований</div>
+        <div><span class="p">2</span> прототип или MVP — демо каждый день</div>
+        <div><span class="p">3</span> разработка + тесты</div>
+        <div><span class="p">4</span> деплой на прод</div>
+        <div><span class="ok">✓ поддержка и доработка — ключи и код у тебя</span></div>
+        <div class="c" style="margin-top:8px">введите <span class="cmd">help</span> и нажмите Enter</div>
+      </div>
+      <div class="term-input-line">
+        <span class="ps">akarmain@os:~$</span>
+        <input id="termIn" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Командная строка" placeholder="help">
+      </div>
+    </div>
+  </section>
+
+
+  <!-- настройки -->
+  <section class="win notch closed" id="winSettings" style="left: 38%; top: 210px; width: 310px; z-index: 20;" data-screen-label="Настройки">
+    <div class="win-head"><span>настройки.cfg</span><span class="grow dither"></span><button class="wbtn" data-min="winSettings" aria-label="Свернуть">—</button><button class="wbtn" data-close="winSettings" aria-label="Закрыть">×</button></div>
+    <div class="win-body">
+      <div class="cfg">
+        <div class="cfg-row">
+          <div><div class="cfg-label">тема</div></div>
+          <button id="cfgTheme" class="cfg-toggle">тёмная</button>
+        </div>
+        <div class="cfg-row">
+          <div>
+            <div class="cfg-label">язык</div>
+            <div class="cfg-desc">пока тестовый выбор</div>
+          </div>
+          <div class="cfg-choice" id="cfgLang" aria-label="Выбор языка">
+            <button class="on" type="button">русский</button>
+            <button type="button">русский</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- иконки на столе -->
+<div class="desk-icons" data-screen-label="Иконки">
+  <a class="dicon" href="https://github.com/akarmain" target="_blank" rel="noopener">
+    <span class="box"><svg class="px-icon" width="26" height="26" viewBox="0 0 16 16" shape-rendering="crispEdges"><g fill="#8b7ef8"><rect x="5" y="1" width="6" height="1"></rect><rect x="3" y="2" width="2" height="1"></rect><rect x="11" y="2" width="2" height="1"></rect><rect x="2" y="3" width="1" height="5"></rect><rect x="13" y="3" width="1" height="5"></rect><rect x="3" y="8" width="2" height="2"></rect><rect x="11" y="8" width="2" height="2"></rect><rect x="5" y="10" width="6" height="1"></rect><rect x="5" y="11" width="1" height="4"></rect><rect x="10" y="11" width="1" height="4"></rect><rect x="4" y="13" width="1" height="1"></rect><rect x="3" y="12" width="1" height="1"></rect></g><g fill="#8b7ef8"><rect x="5" y="4" width="2" height="2"></rect><rect x="9" y="4" width="2" height="2"></rect></g></svg></span>
+    <span>github</span>
+  </a>
+  <button class="dicon" data-open="winStack">
+    <span class="box"><svg class="px-icon" width="26" height="26" viewBox="0 0 16 16" shape-rendering="crispEdges"><g fill="#8b7ef8"><rect x="2" y="2" width="12" height="3"></rect><rect x="2" y="6" width="12" height="3"></rect><rect x="2" y="10" width="12" height="3"></rect></g><g fill="#0d0d10"><rect x="3" y="3" width="10" height="1"></rect><rect x="3" y="7" width="10" height="1"></rect><rect x="3" y="11" width="10" height="1"></rect></g></svg></span>
+    <span>стек.json</span>
+  </button>
+  <button class="dicon" data-open="winSvc">
+    <span class="box"><svg class="px-icon" width="26" height="26" viewBox="0 0 16 16" shape-rendering="crispEdges"><g fill="#8b7ef8"><rect x="3" y="1" width="8" height="1"></rect><rect x="3" y="2" width="1" height="13"></rect><rect x="11" y="1" width="1" height="3"></rect><rect x="11" y="4" width="2" height="1"></rect><rect x="12" y="4" width="1" height="11"></rect><rect x="4" y="14" width="9" height="1"></rect><rect x="5" y="4" width="4" height="1"></rect><rect x="5" y="7" width="6" height="1"></rect><rect x="5" y="9" width="6" height="1"></rect><rect x="5" y="11" width="4" height="1"></rect></g></svg></span>
+    <span>услуги.md</span>
+  </button>
+  <button class="dicon" data-open="winExp">
+    <span class="box"><svg class="px-icon" width="26" height="26" viewBox="0 0 16 16" shape-rendering="crispEdges"><g fill="#8b7ef8"><rect x="7" y="1" width="2" height="14"></rect><rect x="3" y="3" width="4" height="1"></rect><rect x="3" y="3" width="1" height="3"></rect><rect x="9" y="7" width="4" height="1"></rect><rect x="12" y="7" width="1" height="3"></rect><rect x="3" y="11" width="4" height="1"></rect><rect x="3" y="11" width="1" height="3"></rect></g></svg></span>
+    <span>опыт.log</span>
+  </button>
+</div>
+
+<div class="hint" id="hint">окна можно таскать за заголовок · шестерёнка открывает настройки</div>
+<div class="empty"><div>рабочий стол пуст<br>открой окно в доке <i>↓</i></div></div>
+<div class="buildtag">© 2026 akarmain · разработка веб-приложений, api и автоматизация · build 2606.12</div>
+
+<!-- док -->
+<div class="dock notch" data-screen-label="Док">
+  <button data-open="winAbout" data-tip="обо_мне.txt" aria-label="Обо мне"><svg class="px-icon" width="32" height="32" viewBox="0 0 16 16" shape-rendering="crispEdges"><g fill="#8b7ef8"><rect x="6" y="2" width="4" height="1"></rect><rect x="5" y="3" width="6" height="4"></rect><rect x="6" y="7" width="4" height="1"></rect><rect x="4" y="9" width="8" height="1"></rect><rect x="3" y="10" width="10" height="4"></rect></g></svg></button>
+  <button data-open="winWork" data-tip="~/проекты" aria-label="Проекты"><svg class="px-icon" width="32" height="32" viewBox="0 0 16 16" shape-rendering="crispEdges"><g fill="#8b7ef8"><rect x="1" y="3" width="6" height="1"></rect><rect x="1" y="4" width="14" height="1"></rect><rect x="1" y="5" width="14" height="8"></rect></g><rect x="2" y="6" width="12" height="6" fill="#131318"></rect><rect x="2" y="7" width="12" height="5" fill="#8b7ef8"></rect></svg></button>
+  <button data-open="winStack" data-tip="стек.json" aria-label="Стек"><svg class="px-icon" width="32" height="32" viewBox="0 0 16 16" shape-rendering="crispEdges"><g fill="#8b7ef8"><rect x="2" y="2" width="12" height="3"></rect><rect x="2" y="6" width="12" height="3"></rect><rect x="2" y="10" width="12" height="3"></rect></g><g fill="#131318"><rect x="3" y="3" width="10" height="1"></rect><rect x="3" y="7" width="10" height="1"></rect><rect x="3" y="11" width="10" height="1"></rect></g></svg></button>
+  <button data-open="winSvc" data-tip="услуги.md" aria-label="Услуги"><svg class="px-icon" width="32" height="32" viewBox="0 0 16 16" shape-rendering="crispEdges"><g fill="#8b7ef8"><rect x="3" y="1" width="8" height="1"></rect><rect x="3" y="2" width="1" height="13"></rect><rect x="11" y="1" width="1" height="3"></rect><rect x="11" y="4" width="2" height="1"></rect><rect x="12" y="4" width="1" height="11"></rect><rect x="4" y="14" width="9" height="1"></rect><rect x="5" y="4" width="4" height="1"></rect><rect x="5" y="7" width="6" height="1"></rect><rect x="5" y="9" width="6" height="1"></rect><rect x="5" y="11" width="4" height="1"></rect></g></svg></button>
+  <button data-open="winExp" data-tip="опыт.log" aria-label="Опыт"><svg class="px-icon" width="32" height="32" viewBox="0 0 16 16" shape-rendering="crispEdges"><g fill="#8b7ef8"><rect x="7" y="1" width="2" height="14"></rect><rect x="3" y="3" width="4" height="1"></rect><rect x="3" y="3" width="1" height="3"></rect><rect x="9" y="7" width="4" height="1"></rect><rect x="12" y="7" width="1" height="3"></rect><rect x="3" y="11" width="4" height="1"></rect><rect x="3" y="11" width="1" height="3"></rect></g></svg></button>
+  <button data-open="winTerm" data-tip="терминал" aria-label="Терминал"><svg class="px-icon" width="32" height="32" viewBox="0 0 16 16" shape-rendering="crispEdges"><g fill="#8b7ef8"><rect x="1" y="2" width="14" height="12"></rect></g><rect x="2" y="3" width="12" height="10" fill="#0a0a0d"></rect><g fill="#7fd49a"><rect x="3" y="5" width="1" height="1"></rect><rect x="4" y="6" width="1" height="1"></rect><rect x="3" y="7" width="1" height="1"></rect><rect x="6" y="9" width="4" height="1"></rect></g></svg></button>
+  <span class="dock-sep"></span>
+  <button data-open="winSettings" data-tip="настройки.cfg" aria-label="Настройки"><svg class="px-icon" width="32" height="32" viewBox="0 0 16 16" shape-rendering="crispEdges"><g fill="#8b7ef8"><rect x="2" y="3" width="12" height="1"></rect><rect x="2" y="7" width="12" height="1"></rect><rect x="2" y="11" width="12" height="1"></rect><rect x="4" y="2" width="3" height="3"></rect><rect x="9" y="6" width="3" height="3"></rect><rect x="5" y="10" width="3" height="3"></rect></g><rect x="5" y="3" width="1" height="1" fill="#0d0d10"></rect><rect x="10" y="7" width="1" height="1" fill="#0d0d10"></rect><rect x="6" y="11" width="1" height="1" fill="#0d0d10"></rect></svg></button>
+</div>
+
+<script>
+(function () {
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var touch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  var z = 30;
+  var wins = [].slice.call(document.querySelectorAll('.win'));
+  function el(id) { return document.getElementById(id); }
+  function place(w, x, y) { w.style.left = Math.round(x) + 'px'; w.style.top = Math.round(y) + 'px'; }
+  var WINDOW_MARGIN = 20;
+
+  function initAmbientNoise() {
+    var canvas = el('ambientNoise');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d', { alpha: true });
+    if (!ctx) return;
+    var W = 0, H = 0, CW = 0, CH = 0, PIXEL = 3;
+    var mouse = { x: -9999, y: -9999, tx: -9999, ty: -9999, vx: 0, vy: 0, active: 0 };
+    var currents = [];
+    var t0 = performance.now(), last = 0;
+    var FRAME = 1000 / 28;
+
+    function readColor(name, fallback) {
+      var raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      var hex = raw && raw.charAt(0) === '#' ? raw.slice(1) : fallback;
+      if (hex.length === 3) hex = hex.replace(/./g, function (x) { return x + x; });
+      var n = parseInt(hex, 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+
+    var eddies = [
+      { x: .22, y: .78, r: .30, amp: 1.9, spin: .18, phase: .4 },
+      { x: .66, y: .58, r: .28, amp: 1.7, spin: -.16, phase: 2.3 },
+      { x: .86, y: .82, r: .24, amp: 2.1, spin: .20, phase: 4.1 }
+    ];
+
+    function resize() {
+      W = innerWidth; H = innerHeight;
+      PIXEL = W < 680 ? 2 : W > 1500 ? 3 : 2;
+      CW = Math.ceil(W / PIXEL);
+      CH = Math.ceil(H / PIXEL);
+      canvas.width = CW;
+      canvas.height = CH;
+      canvas.style.width = W + 'px';
+      canvas.style.height = H + 'px';
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+    }
+
+    function pulseAt(x, y, power) {
+      if (reduce) return;
+      currents.push({
+        x: x / PIXEL,
+        y: y / PIXEL,
+        born: performance.now(),
+        power: Math.min(.75, power || .42),
+        dir: Math.random() > .5 ? 1 : -1
+      });
+      if (currents.length > 5) currents.shift();
+    }
+
+    function rgba(rgb, alpha) {
+      return 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + alpha + ')';
+    }
+
+    function hash2(a, b) {
+      var n = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
+      return n - Math.floor(n);
+    }
+
+    function windowFields() {
+      var fields = [];
+      for (var i = 0; i < wins.length; i++) {
+        var w = wins[i];
+        if (w.classList.contains('min') || getComputedStyle(w).display === 'none') continue;
+        var r = w.getBoundingClientRect();
+        if (r.width < 40 || r.height < 40) continue;
+        fields.push({
+          x: (r.left + r.width * .5) / PIXEL,
+          y: (r.top + r.height * .5) / PIXEL,
+          left: r.left / PIXEL,
+          right: (r.left + r.width) / PIXEL,
+          top: r.top / PIXEL,
+          bottomEdge: (r.top + r.height) / PIXEL,
+          rx: Math.max(34, r.width * .62 / PIXEL),
+          ry: Math.max(24, r.height * .56 / PIXEL)
+        });
+      }
+      return fields;
+    }
+
+    function paint(now) {
+      requestAnimationFrame(paint);
+      if (!CW || !CH || now - last < FRAME) return;
+      last = now;
+      var t = (now - t0) / 1000;
+
+      var px = mouse.x, py = mouse.y;
+      mouse.x += (mouse.tx - mouse.x) * .22;
+      mouse.y += (mouse.ty - mouse.y) * .22;
+      mouse.vx = (mouse.x - px) / PIXEL;
+      mouse.vy = (mouse.y - py) / PIXEL;
+      mouse.active += ((mouse.tx > -1000 ? 1 : 0) - mouse.active) * .20;
+      currents = currents.filter(function (r) { return now - r.born < 2200; });
+
+      ctx.clearRect(0, 0, CW, CH);
+      ctx.globalCompositeOperation = 'source-over';
+
+      var accent = readColor('--accent', '8b7ef8');
+      var line = readColor('--line2', '2e2e38');
+      var green = readColor('--green', '7fd49a');
+      var fields = windowFields();
+      var spacing = Math.max(4, Math.round(CH / 86));
+      var slope = .54;
+      var drift = reduce ? 0 : t * 2.1;
+      var start = -24 - (CW + 18) * slope;
+      var end = CH + 30;
+      var lineIndex = 0;
+
+      for (var offset = start; offset <= end; offset += spacing) {
+        var bright = lineIndex % 7 === 0;
+        var baseColor = bright ? accent : lineIndex % 11 === 0 ? green : line;
+        var baseAlpha = bright ? .16 : lineIndex % 11 === 0 ? .07 : .10;
+        var lineHeat = 0;
+        var lineGravity = 0;
+        ctx.beginPath();
+        var first = true;
+        var dust = [];
+        var hotDust = [];
+
+        for (var x = -18; x <= CW + 18; x += 2) {
+          var base = offset + x * slope;
+          var yy = base
+            + Math.sin(x * .030 + offset * .021 + drift * .14) * 2.4
+            + Math.sin(x * .012 - offset * .035 - drift * .20) * 3.1
+            + Math.sin((x + offset) * .052 + drift * .08) * .9;
+          var xx = x;
+          var pointHeat = 0;
+          var pointGravity = 0;
+
+          for (var ei = 0; ei < eddies.length; ei++) {
+            var e = eddies[ei];
+            var cx = e.x * CW;
+            var cy = e.y * CH;
+            var dx = x - cx;
+            var dy = base - cy;
+            var rr = Math.max(18, e.r * Math.min(CW, CH));
+            var dist = Math.sqrt(dx * dx + dy * dy) + .001;
+            var fall = Math.exp(-(dist * dist) / (rr * rr));
+            var angle = Math.atan2(dy, dx);
+            var curl = Math.sin(angle * 3.0 + dist * .105 - drift * e.spin + e.phase);
+            yy += curl * e.amp * fall;
+            xx += Math.cos(angle + Math.PI * .5) * curl * fall * 1.2;
+          }
+
+          if (!reduce && mouse.x > -1000) {
+            var mx = mouse.x / PIXEL;
+            var my = mouse.y / PIXEL;
+            var dxm = x - mx;
+            var dym = base - my;
+            var md2 = dxm * dxm + dym * dym;
+            var md = Math.sqrt(md2) + .001;
+            var hole = Math.exp(-md2 / 520) * mouse.active;
+            var ring = Math.exp(-Math.pow(md - 17, 2) / 170) * mouse.active;
+            var drag = Math.min(.62, Math.sqrt(mouse.vx * mouse.vx + mouse.vy * mouse.vy) * .055);
+            xx += (dxm / md) * (hole * 5.8 - ring * 1.4) + Math.max(-3.2, Math.min(3.2, mouse.vx * drag)) * hole;
+            yy += (dym / md) * (hole * 4.9 - ring * 1.1) + Math.max(-3.6, Math.min(3.6, mouse.vy * drag)) * hole;
+            pointHeat = Math.max(pointHeat, ring * .68 + hole * .14);
+            lineHeat = Math.max(lineHeat, pointHeat);
+          }
+
+          for (var ci = 0; ci < currents.length; ci++) {
+            var c = currents[ci];
+            var age = (now - c.born) / 2200;
+            var dx = x - c.x;
+            var dy = base - c.y;
+            var cd = Math.sqrt(dx * dx + dy * dy) + .001;
+            var cFall = Math.exp(-(cd * cd) / 2400);
+            var cFade = Math.sin(Math.PI * Math.max(0, Math.min(1, age)));
+            yy += Math.sin(Math.atan2(dy, dx) * 3 + cd * .07 - age * 5) * cFall * cFade * c.power * c.dir * 3.4;
+            xx += Math.cos(cd * .06 - age * 4) * cFall * cFade * c.power * 1.0;
+            pointHeat = Math.max(pointHeat, cFall * cFade * .18);
+            lineHeat = Math.max(lineHeat, pointHeat);
+          }
+
+          for (var fi = 0; fi < fields.length; fi++) {
+            var f = fields[fi];
+            var insideX = x >= f.left && x <= f.right;
+            var insideY = base >= f.top && base <= f.bottomEdge;
+            var dxOutside = Math.max(f.left - x, 0, x - f.right);
+            var dyOutside = Math.max(f.top - base, 0, base - f.bottomEdge);
+            var outsideDist = Math.sqrt(dxOutside * dxOutside + dyOutside * dyOutside);
+            var innerEdge = insideX && insideY
+              ? Math.min(x - f.left, f.right - x, base - f.top, f.bottomEdge - base)
+              : 999;
+            var edgeDist = insideX && insideY ? innerEdge : outsideDist;
+            var bandWidth = Math.max(1.1, 2.6 / PIXEL);
+            var frameFall = Math.exp(-Math.pow(edgeDist / bandWidth, 2));
+            var below = Math.max(0, base - f.bottomEdge);
+            var above = Math.max(0, f.top - base);
+            var sideGap = insideX ? 0 : Math.min(Math.abs(x - f.left), Math.abs(x - f.right));
+            var verticalBand = base >= f.top - Math.max(4, 12 / PIXEL) && base <= f.bottomEdge + Math.max(8, 28 / PIXEL);
+            var nearSide = verticalBand && sideGap <= Math.max(5, 18 / PIXEL);
+            var nearTop = base <= f.top && above <= Math.max(4, 14 / PIXEL) && x >= f.left - Math.max(4, 12 / PIXEL) && x <= f.right + Math.max(4, 12 / PIXEL);
+            var nearBottom = base >= f.bottomEdge && below <= Math.max(9, 34 / PIXEL) && x >= f.left - Math.max(6, 20 / PIXEL) && x <= f.right + Math.max(6, 20 / PIXEL);
+            var outsideAllowed = insideX || insideY || nearTop || nearBottom || nearSide;
+            var frameMask = outsideAllowed ? 1 : 0;
+            var horizontalSpan = insideX
+              ? 1
+              : Math.exp(-Math.pow(sideGap / Math.max(6, 22 / PIXEL), 2));
+            var underside = base >= f.bottomEdge
+              ? Math.exp(-Math.pow(below / Math.max(10, 42 / PIXEL), 2)) * horizontalSpan
+              : 0;
+            var activeFrame = frameFall * frameMask * (insideX && insideY ? .52 : 1);
+            if (activeFrame > .02 || underside > .02) {
+              var cxPull = (f.x - x) / Math.max(1, f.rx);
+              var bottomPull = Math.max(0, 1 - Math.abs(x - f.x) / Math.max(1, f.rx));
+              xx += cxPull * activeFrame * .55;
+              yy += activeFrame * .58 + underside * (8.0 + bottomPull * 5.2);
+              pointGravity = Math.max(pointGravity, activeFrame * .34 + underside * .34);
+              lineGravity = Math.max(lineGravity, pointGravity);
+            }
+          }
+
+          if (first) { ctx.moveTo(xx, yy); first = false; }
+          else ctx.lineTo(xx, yy);
+          if (hash2(lineIndex, Math.round(x / 3)) > .955 - pointHeat * .06 - pointGravity * .11) dust.push({ x: xx, y: yy, heat: pointHeat, gravity: pointGravity });
+          if (pointHeat > .16 || pointGravity > .18) hotDust.push({ x: xx, y: yy, heat: pointHeat, gravity: pointGravity });
+        }
+
+        var color = baseColor;
+        var alpha = Math.min(.24, baseAlpha + lineHeat * .06 + lineGravity * .018);
+        ctx.strokeStyle = rgba(color, alpha);
+        ctx.lineWidth = bright ? 1.12 : 1;
+        ctx.lineJoin = 'miter';
+        ctx.lineCap = 'butt';
+        ctx.stroke();
+
+        for (var di = 0; di < dust.length; di++) {
+          var p = dust[di];
+          var dustColor = p.gravity > p.heat && p.gravity > .11 ? green : color;
+          ctx.fillStyle = rgba(dustColor, Math.min(.26, (bright ? .10 : .055) + p.heat * .15 + p.gravity * .20));
+          ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
+        }
+        for (var hi = 0; hi < hotDust.length; hi++) {
+          var hp = hotDust[hi];
+          ctx.fillStyle = rgba(hp.heat > hp.gravity ? accent : green, Math.min(.42, .075 + hp.heat * .42 + hp.gravity * .26));
+          ctx.fillRect(Math.round(hp.x), Math.round(hp.y), 1, 1);
+        }
+        lineIndex++;
+      }
+    }
+
+    resize();
+    addEventListener('resize', resize);
+    addEventListener('mousemove', function (e) {
+      mouse.tx = e.clientX; mouse.ty = e.clientY;
+    }, { passive: true });
+    addEventListener('mouseleave', function () { mouse.tx = -9999; mouse.ty = -9999; });
+    addEventListener('mousedown', function (e) {
+      if (e.button === 0) pulseAt(e.clientX, e.clientY, .7);
+    }, { passive: true });
+    window.akarmainAmbientPulse = pulseAt;
+    requestAnimationFrame(paint);
+  }
+
+  initAmbientNoise();
+
+  function workArea() {
+    var bar = document.querySelector('.menubar');
+    var dockEl = document.querySelector('.dock');
+    var barBottom = bar ? bar.getBoundingClientRect().bottom : 0;
+    var dockTop = dockEl && getComputedStyle(dockEl).display !== 'none'
+      ? dockEl.getBoundingClientRect().top
+      : innerHeight;
+    var top = Math.max(WINDOW_MARGIN, barBottom + WINDOW_MARGIN);
+    var bottom = Math.min(innerHeight - WINDOW_MARGIN, dockTop - WINDOW_MARGIN);
+    if (bottom - top < 180) bottom = innerHeight - WINDOW_MARGIN;
+    return {
+      left: WINDOW_MARGIN,
+      top: top,
+      width: Math.max(280, innerWidth - WINDOW_MARGIN * 2),
+      height: Math.max(180, bottom - top)
+    };
+  }
+
+  function maximizeWin(w) {
+    if (innerWidth < 760) return;
+    var area = workArea();
+    w.style.left = area.left + 'px';
+    w.style.top = area.top + 'px';
+    w.style.width = area.width + 'px';
+    w.style.height = area.height + 'px';
+  }
+
+  /* ── фокус ── */
+  function focusWin(w) {
+    wins.forEach(function (x) { x.classList.remove('focus'); });
+    w.classList.add('focus');
+    w.style.zIndex = ++z;
+  }
+
+  function syncMinBtn(w) {
+    var b = w.querySelector('[data-min]');
+    if (!b) return;
+    var min = w.classList.contains('min');
+    b.textContent = min ? '+' : '—';
+    b.setAttribute('aria-label', min ? 'Развернуть' : 'Свернуть');
+  }
+
+  function syncDock() {
+    var anyOpen = false;
+    document.querySelectorAll('.dock button[data-open]').forEach(function (b) {
+      var w = el(b.getAttribute('data-open'));
+      var closed = w.classList.contains('closed');
+      var min = w.classList.contains('min');
+      b.classList.toggle('open', !closed && !min);
+      b.classList.toggle('mini', !closed && min);
+      if (!closed) anyOpen = true;
+    });
+    document.body.classList.toggle('all-closed', !anyOpen);
+  }
+
+  function centerWin(w) {
+    if (innerWidth < 760) return;
+    var ww = w.offsetWidth || 410, wh = w.offsetHeight || 320;
+    place(w, Math.max(14, innerWidth / 2 - ww / 2), Math.max(54, (innerHeight - 56) / 2 - wh / 2 + 8));
+  }
+
+  /* окна, открытые после старта, появляются каскадом от центра */
+  var spawnN = 0;
+  function spawnPlace(w) {
+    if (w.dataset.placed || w.dataset.moved || innerWidth < 760) return;
+    w.dataset.placed = '1';
+    var ww = w.offsetWidth, wh = w.offsetHeight;
+    var x = innerWidth / 2 - ww / 2 + ((spawnN % 4) - 1.5) * 42;
+    var y = 70 + (spawnN % 4) * 30;
+    spawnN++;
+    place(w, Math.max(14, Math.min(innerWidth - ww - 14, x)), Math.max(50, Math.min(innerHeight - wh - 92, y)));
+  }
+
+  /* ── открыть / закрыть / свернуть ── */
+  function openWin(id) {
+    var w = el(id); if (!w) return;
+    var wasClosed = w.classList.contains('closed');
+    w.classList.remove('closed', 'min', 'anim-out');
+    w.style.height = '';
+    syncMinBtn(w);
+    if (wasClosed) {
+      spawnPlace(w);
+      if (!reduce) { w.classList.remove('anim-in'); void w.offsetWidth; w.classList.add('anim-in'); }
+      var db = document.querySelector('.dock button[data-open="' + id + '"]');
+      if (db && !reduce) { db.classList.remove('bounce'); void db.offsetWidth; db.classList.add('bounce'); }
+      if (window.akarmainAmbientPulse) {
+        var wr = w.getBoundingClientRect();
+        window.akarmainAmbientPulse(wr.left + wr.width / 2, wr.top + wr.height / 2, .55);
+      }
+    }
+    focusWin(w); syncDock();
+    if (id === 'winTerm' && innerWidth >= 760) { var ti = el('termIn'); if (ti) setTimeout(function () { ti.focus(); }, 120); }
+    if (innerWidth < 760) {
+      var top = w.getBoundingClientRect().top + (window.scrollY || document.documentElement.scrollTop) - 50;
+      window.scrollTo(0, Math.max(0, top));
+    }
+  }
+  function closeWin(w) {
+    if (reduce || innerWidth < 760) { w.classList.add('closed'); syncDock(); return; }
+    w.classList.add('anim-out');
+    var done = function () { w.classList.remove('anim-out'); w.classList.add('closed'); syncDock(); w.removeEventListener('animationend', done); };
+    w.addEventListener('animationend', done);
+    setTimeout(function () { if (w.classList.contains('anim-out')) done(); }, 260);
+  }
+
+  document.querySelectorAll('[data-open]').forEach(function (b) {
+    b.addEventListener('click', function () { openWin(b.getAttribute('data-open')); });
+  });
+  document.querySelectorAll('[data-close]').forEach(function (b) {
+    b.addEventListener('click', function () { closeWin(el(b.getAttribute('data-close'))); });
+  });
+  document.querySelectorAll('[data-min]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var w = el(b.getAttribute('data-min'));
+      w.classList.toggle('min'); syncMinBtn(w); syncDock();
+    });
+  });
+
+  /* ── минимальные размеры окон ── */
+  var MIN_W = 280, MIN_H = 180;
+
+  /* ── фокус + перетаскивание + растягивание со всех сторон ── */
+  wins.forEach(function (w) {
+    var head = w.querySelector('.win-head');
+
+    /* создаём 8 ручек ресайза */
+    var edges = ['n', 's', 'w', 'e', 'nw', 'ne', 'sw', 'se'];
+    edges.forEach(function (dir) {
+      var edge = document.createElement('div');
+      edge.className = 'win-edge ' + dir;
+      edge.setAttribute('aria-hidden', 'true');
+      w.appendChild(edge);
+
+      edge.addEventListener('mousedown', function (e) {
+        if (innerWidth < 760) return;
+        e.preventDefault(); e.stopPropagation();
+        focusWin(w); w.dataset.moved = '1';
+        w.classList.add('is-interacting');
+
+        var startX = e.clientX, startY = e.clientY;
+        var startW = w.offsetWidth, startH = w.offsetHeight;
+        var startL = w.offsetLeft, startT = w.offsetTop;
+        var cursor = getComputedStyle(edge).cursor;
+
+        function mv(ev) {
+          var dx = ev.clientX - startX, dy = ev.clientY - startY;
+          var nw = startW, nh = startH, nl = startL, nt = startT;
+
+          /* горизонталь */
+          if (dir.indexOf('e') !== -1) {
+            nw = Math.max(MIN_W, startW + dx);
+          }
+          if (dir.indexOf('w') !== -1) {
+            var maxDx = startW - MIN_W;
+            var actualDx = Math.min(dx, maxDx);
+            nw = startW - actualDx;
+            nl = startL + actualDx;
+          }
+
+          /* вертикаль */
+          if (dir.indexOf('s') !== -1) {
+            nh = Math.max(MIN_H, startH + dy);
+          }
+          if (dir.indexOf('n') !== -1) {
+            var maxDy = startH - MIN_H;
+            var actualDy = Math.min(dy, maxDy);
+            nh = startH - actualDy;
+            nt = Math.max(42, startT + actualDy);
+          }
+
+          /* границы экрана */
+          nl = Math.max(0, Math.min(innerWidth - 100, nl));
+          nt = Math.max(42, nt);
+          nw = Math.min(innerWidth - nl - 8, nw);
+          nh = Math.min(innerHeight - nt - 8, nh);
+
+          w.style.width = nw + 'px';
+          w.style.height = nh + 'px';
+          w.style.left = nl + 'px';
+          w.style.top = nt + 'px';
+        }
+
+        function up() {
+          removeEventListener('mousemove', mv);
+          removeEventListener('mouseup', up);
+          document.body.style.cursor = '';
+          w.classList.remove('is-interacting');
+        }
+
+        document.body.style.cursor = cursor;
+        addEventListener('mousemove', mv);
+        addEventListener('mouseup', up);
+      });
+    });
+
+    w.addEventListener('mousedown', function () { focusWin(w); });
+    head.addEventListener('click', function (e) {
+      if (e.target.closest('button')) return;
+      if (w.classList.contains('min')) { w.classList.remove('min'); syncMinBtn(w); syncDock(); }
+    });
+    head.addEventListener('mousedown', function (e) {
+      if (e.target.closest('button')) return;
+      if (innerWidth < 760) return;
+      e.preventDefault();
+      w.classList.add('is-interacting');
+      var sx = e.clientX - w.offsetLeft, sy = e.clientY - w.offsetTop, movedNow = false;
+      function mv(ev) {
+        movedNow = true;
+        w.style.left = Math.max(0, Math.min(innerWidth - 120, ev.clientX - sx)) + 'px';
+        w.style.top = Math.max(42, Math.min(innerHeight - 60, ev.clientY - sy)) + 'px';
+      }
+      function up() {
+        if (movedNow) w.dataset.moved = '1';
+        w.classList.remove('is-interacting');
+        removeEventListener('mousemove', mv);
+        removeEventListener('mouseup', up);
+      }
+      addEventListener('mousemove', mv); addEventListener('mouseup', up);
+    });
+  });
+
+  /* Esc закрывает активное окно */
+  addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (document.activeElement && document.activeElement.id === 'termIn') return;
+    var w = document.querySelector('.win.focus');
+    if (w && !w.classList.contains('closed')) closeWin(w);
+  });
+
+  /* ── центрируем «обо мне» при старте ── */
+  function initLayout() {
+    var about = el('winAbout');
+    if (about && about.classList.contains('expanded') && !about.classList.contains('closed')) maximizeWin(about);
+    else if (about && !about.dataset.moved && !about.classList.contains('closed')) { centerWin(about); about.dataset.placed = '1'; }
+  }
+  initLayout();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(initLayout);
+  addEventListener('load', initLayout);
+
+  var rsT;
+  addEventListener('resize', function () {
+    clearTimeout(rsT);
+    rsT = setTimeout(function () {
+      var a = el('winAbout');
+      if (a && a.classList.contains('expanded') && !a.classList.contains('closed')) maximizeWin(a);
+      else if (a && !a.dataset.moved && !a.classList.contains('closed')) centerWin(a);
+    }, 140);
+  });
+
+  syncDock();
+  wins.forEach(syncMinBtn);
+
+  /* ── часы ── */
+  var clock = el('clock');
+  function tick() { var d = new Date(); clock.textContent = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+  tick(); setInterval(tick, 15000);
+
+  /* ── подсказка ── */
+  var hint = el('hint');
+  if (hint) { hint.textContent = 'окна можно таскать за заголовок · тянуть за угол · открывать в доке'; setTimeout(function () { hint.style.opacity = '0'; }, 9000); }
+
+  /* ── магнификация дока ── */
+  var dock = document.querySelector('.dock');
+  var dockBtns = [].slice.call(dock.querySelectorAll('button'));
+  if (!reduce && !touch) {
+    dock.addEventListener('mousemove', function (e) {
+      dockBtns.forEach(function (b) {
+        var r = b.getBoundingClientRect(), c = r.left + r.width / 2;
+        var d = Math.abs(e.clientX - c);
+        var mag = d < 90 ? 1 + (1 - d / 90) * 0.42 : 1;
+        b.style.setProperty('--mag', mag.toFixed(3));
+        b.style.transform = 'scale(' + mag.toFixed(3) + ')';
+      });
+    });
+    dock.addEventListener('mouseleave', function () {
+      dockBtns.forEach(function (b) { b.style.setProperty('--mag', 1); b.style.transform = ''; });
+    });
+  }
+
+  /* ── кнопка «ещё ссылки» → раскрытие bento ── */
+  var moreBtn = el('moreLinksBtn');
+  var winAbout = el('winAbout');
+  if (moreBtn && winAbout) {
+    moreBtn.addEventListener('click', function () {
+      var isExpanded = winAbout.classList.toggle('expanded');
+      moreBtn.textContent = isExpanded ? '← свернуть' : 'ещё ссылки →';
+      if (isExpanded) {
+        winAbout.dataset.beforeExpand = JSON.stringify({
+          left: winAbout.offsetLeft,
+          top: winAbout.offsetTop,
+          width: winAbout.offsetWidth,
+          height: winAbout.style.height || ''
+        });
+        maximizeWin(winAbout);
+      } else {
+        try {
+          var rect = JSON.parse(winAbout.dataset.beforeExpand || '{}');
+          if (rect.left != null) winAbout.style.left = rect.left + 'px';
+          if (rect.top != null) winAbout.style.top = rect.top + 'px';
+          winAbout.style.width = (rect.width || 340) + 'px';
+          winAbout.style.height = rect.height || '';
+        } catch (e) {
+          winAbout.style.width = '340px';
+          winAbout.style.height = '';
+        }
+        delete winAbout.dataset.beforeExpand;
+      }
+    });
+  }
+
+  /* ── тема ── */
+  var cfgTheme = null;
+  function syncTheme() {
+    var light = document.documentElement.getAttribute('data-theme') === 'light';
+    if (cfgTheme) { cfgTheme.textContent = light ? 'светлая' : 'тёмная'; cfgTheme.classList.toggle('on', light); }
+  }
+
+  /* ── настройки.cfg ── */
+  cfgTheme = el('cfgTheme');
+  if (cfgTheme) cfgTheme.addEventListener('click', function () {
+    var light = document.documentElement.getAttribute('data-theme') === 'light';
+    if (light) document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', 'light');
+    try { localStorage.setItem('akos-theme', document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'); } catch (e) {}
+    syncTheme();
+  });
+  var cfgLang = el('cfgLang');
+  if (cfgLang) cfgLang.addEventListener('click', function (event) {
+    if (event.target.tagName !== 'BUTTON') return;
+    Array.prototype.forEach.call(cfgLang.querySelectorAll('button'), function (button) { button.classList.remove('on'); });
+    event.target.classList.add('on');
+  });
+
+  syncTheme();
+
+  /* ── интерактивный терминал ── */
+  var termIn = el('termIn'), termOut = el('termOut'), termWrap = document.querySelector('.term-wrap');
+  if (termWrap) termWrap.addEventListener('mousedown', function (e) { if (!e.target.closest('a, button')) setTimeout(function () { termIn.focus(); }, 0); });
+
+  var history = [], hIdx = 0, busy = false;
+  function escHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function termScroll() { termOut.scrollTop = termOut.scrollHeight; }
+  function addLine(html, cls) { var d = document.createElement('div'); if (cls) d.className = cls; d.innerHTML = html; termOut.appendChild(d); termScroll(); return d; }
+
+  function typeOut(text, cls, cb) {
+    if (reduce) { addLine(escHtml(text), cls || 'out'); if (cb) cb(); return; }
+    var d = addLine('', cls || 'out'), i = 0; busy = true;
+    (function step() {
+      if (i <= text.length) { d.textContent = text.slice(0, i); i++; termScroll(); setTimeout(step, 7); }
+      else { busy = false; if (cb) cb(); }
+    })();
+  }
+  function typeLines(lines, cb) {
+    var i = 0;
+    (function next() {
+      if (i >= lines.length) { busy = false; if (cb) cb(); return; }
+      var ln = lines[i++];
+      if (ln && ln.html !== undefined) { addLine(ln.html, ln.cls); next(); }
+      else typeOut(ln, 'out', next);
+    })();
+  }
+
+  var ALIAS = {
+    'помощь': 'help', 'команды': 'help', 'обо': 'about', 'мне': 'about', 'проекты': 'projects',
+    'стек': 'stack', 'услуги': 'services', 'опыт': 'experience', 'связь': 'contact', 'контакт': 'contact',
+    'очистить': 'clear', 'дата': 'date', 'кто': 'whoami'
+  };
+
+  function run(line) {
+    var raw = line.trim();
+    addLine('<span class="ps" style="color:var(--green)">akarmain@os:~$</span> <span class="cmd">' + escHtml(line) + '</span>');
+    if (!raw) return;
+    var parts = raw.split(/\s+/), cmd = (ALIAS[parts[0].toLowerCase()] || parts[0]).toLowerCase(), arg = raw.slice(parts[0].length).trim();
+
+    switch (cmd) {
+      case 'help': case '?':
+        typeLines([
+          'доступные команды:',
+          { html: '<span class="p">whoami</span>   — кто я            <span class="p">projects</span> — открыть проекты', cls: 'out' },
+          { html: '<span class="p">about</span>    — обо мне          <span class="p">stack</span>    — технологии', cls: 'out' },
+          { html: '<span class="p">services</span> — услуги           <span class="p">experience</span> — опыт', cls: 'out' },
+          { html: '<span class="p">contact</span>  — как связаться    <span class="p">social</span>   — ссылки', cls: 'out' },
+          { html: '<span class="p">ls</span> · <span class="p">date</span> · <span class="p">neofetch</span> · <span class="p">echo</span> · <span class="p">clear</span>', cls: 'out' }
+        ]); break;
+      case 'whoami': typeOut('akarmain — fullstack-разработчик. backend, автоматизация, AI-инструменты.'); break;
+      case 'about': openWin('winAbout'); typeOut('→ открываю обо_мне.txt'); break;
+      case 'projects': openWin('winWork'); typeOut('→ 5 избранных проектов, всего сдано 19. открываю ~/проекты'); break;
+      case 'stack': openWin('winStack'); typeOut('→ python · fastapi · react · docker · postgres … открываю стек.json'); break;
+      case 'services': openWin('winSvc'); typeOut('→ backend, боты, парсеры, MVP под ключ. открываю услуги.md'); break;
+      case 'experience': openWin('winExp'); typeOut('→ открываю опыт.log'); break;
+      case 'contact':
+        openWin('winContact');
+        typeLines(['связаться можно так:'], function () {
+          addLine('<span class="ok">telegram</span> <a href="https://t.me/akarmain" target="_blank" rel="noopener">@akarmain</a>   <span class="ok">github</span> <a href="https://github.com/akarmain" target="_blank" rel="noopener">/akarmain</a>', 'out');
+          addLine('<span class="ok">почта</span>    <a href="mailto:hi@akarmain.dev">hi@akarmain.dev</a>   ответ ~20 минут', 'out');
+        });
+        break;
+      case 'social': case 'links':
+        addLine('<a href="https://t.me/akarmain" target="_blank" rel="noopener">telegram →</a>   <a href="https://github.com/akarmain" target="_blank" rel="noopener">github →</a>   <a href="mailto:hi@akarmain.dev">почта →</a>', 'out');
+        break;
+      case 'ls': typeOut('обо_мне.txt   проекты/   стек.json   услуги.md   опыт.log   связь.dlg'); break;
+      case 'date': typeOut(new Date().toLocaleString('ru-RU', { dateStyle: 'full', timeStyle: 'short' })); break;
+      case 'echo': typeOut(arg || ''); break;
+      case 'sudo': typeOut('пароль не требуется — доступ открыт :)', 'ok'); break;
+      case 'neofetch':
+        typeLines([
+          { html: '<span class="p">akarmain@os</span>', cls: 'out' },
+          { html: '<span class="c">-----------</span>', cls: 'out' },
+          'system:  akarmain',
+          'shell:   возьму твою задачу',
+          'uptime:  19 проектов · 0 срывов',
+          'theme:   midnight / px',
+          'CPU:     python · typescript · docker'
+        ]); break;
+      case 'clear': case 'cls': termOut.innerHTML = ''; break;
+      default: typeOut('команда не найдена: ' + parts[0] + ' — наберите help', 'err');
+    }
+  }
+
+  if (termIn) {
+    termIn.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        if (busy) { e.preventDefault(); return; }
+        var v = termIn.value; termIn.value = '';
+        if (v.trim()) { history.push(v); hIdx = history.length; }
+        run(v);
+      } else if (e.key === 'ArrowUp') {
+        if (history.length) { hIdx = Math.max(0, hIdx - 1); termIn.value = history[hIdx] || ''; e.preventDefault(); }
+      } else if (e.key === 'ArrowDown') {
+        if (history.length) { hIdx = Math.min(history.length, hIdx + 1); termIn.value = history[hIdx] || ''; e.preventDefault(); }
+      }
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
