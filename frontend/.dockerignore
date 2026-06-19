@@ -5,8 +5,5 @@ node_modules
 .nitro
 .cache
 dist
-.git
-docs
-backend
 *.log
 .DS_Store

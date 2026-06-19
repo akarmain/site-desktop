@@ -11,9 +11,12 @@
 - **Docker + nginx** — контейнеры и docker-compose
 - Стили — CSS-переменные `--ak-*` (без Tailwind/UI-фреймворков)
 
+Структура: `frontend/` — Nuxt-сайт, `backend/` — FastAPI, `docs/` — документация.
+
 ## Запуск (фронтенд)
 
 ```bash
+cd frontend
 pnpm install
 pnpm dev        # http://localhost:3000  (английский — на /en)
 pnpm generate   # статическая сборка в .output/public

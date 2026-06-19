@@ -1,5 +1,17 @@
 /* AkarmainOS component styles — BEM-ish .ak-* classes, tokens only. */
 
+html.akos-page-lock,
+body.akos-page-lock {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.akos-desktop {
+  overscroll-behavior: none;
+}
+
 /* ── window ── */
 .ak-window {
   background: var(--ak-panel);
@@ -271,6 +283,23 @@
 /* постоянная подпись под иконкой (мобайл, скрыта на десктопе) */
 .ak-dock__label { display: none; }
 
+/* превью-плитки свёрнутых окон в доке — статичный снимок, без рамки */
+.ak-dock-min {
+  flex: none; width: 58px; height: 42px; position: relative; overflow: hidden;
+  border: none; background: transparent;
+}
+/* плитка появляется сразу в полный размер (иначе снимок снимается при ширине 0);
+   при уходе плавно схлопывает ширину → док мягко сужается на восстановлении */
+.docktile-leave-active {
+  transition: width .28s ease, opacity .28s ease, margin .28s ease;
+  overflow: hidden;
+}
+.docktile-leave-to { width: 0; opacity: 0; margin-left: -4px; }
+/* сама плитка кликабельна и ловит ховер (для подписи-плашки, как у иконок);
+   а её содержимое — статичный снимок: без кликов, ховеров и анимаций внутри */
+.ak-dock-min > * { pointer-events: none; }
+.ak-dock-min * { animation: none !important; transition: none !important; }
+
 /* ── desktop icons: positioned ── */
 .ak-desktop-icons { position: fixed; top: 58px; right: 20px; z-index: 1; }
 
@@ -371,7 +400,7 @@
 /* ── terminal full ── */
 .term-wrap { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; background: #0a0a0d; }
 :root[data-theme="light"] .term-wrap { background: #f7f5fc; }
-.term-body { font: 400 12px/1.9 var(--ak-font-mono); padding: 14px 16px 4px; color: var(--ak-muted); user-select: text; flex: 1 1 auto; min-height: 0; overflow: auto; }
+.term-body { font: 400 12px/1.9 var(--ak-font-mono); padding: 14px 16px 4px; color: var(--ak-muted); user-select: text; flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; }
 .term-body .p   { color: var(--ak-accent); }
 .term-body .ok  { color: var(--ak-success); }
 .term-body .c   { color: var(--ak-dim); }
@@ -379,6 +408,7 @@
 .term-body .cmd { color: var(--ak-text); }
 .term-body .ps  { color: var(--ak-success); }
 .term-body a    { color: var(--ak-accent); }
+.term-quick { display: none; }
 .term-input-line { display: flex; align-items: baseline; gap: 8px; padding: 4px 16px 14px; font: 400 12px/1.7 var(--ak-font-mono); }
 .term-input-line .ps { color: var(--ak-success); flex: none; }
 .term-input-line input { flex: 1 1 auto; background: none; border: 0; outline: none; color: var(--ak-text); font: inherit; padding: 0; caret-color: var(--ak-accent); min-width: 0; }
@@ -404,6 +434,10 @@
 
 /* ── responsive: phone = одно полноэкранное окно за раз, док — переключатель ── */
 @media (max-width: 759px) {
+  .akos-desktop.all-closed {
+    touch-action: none;
+  }
+
   .stage { position: static; }
   .ak-window {
     position: fixed !important;
@@ -437,7 +471,7 @@
   .ak-dock { padding-bottom: 6px; }
   .ak-dock > button {
     flex: none;
-    width: auto; height: auto; min-width: 54px;
+    width: 64px; height: auto; min-width: 64px;
     display: flex; flex-direction: column; align-items: center; gap: 2px;
     padding: 4px 6px;
     transform: none !important;        /* без увеличения при тапе */
@@ -447,11 +481,74 @@
   .ak-dock > button::after  { display: none; }  /* статус открыт/закрыт убираем */
   /* постоянная подпись с названием окна, авто-уменьшение и обрезка по ширине */
   .ak-dock__label {
-    display: block; max-width: 15ch;
-    font: 400 clamp(4px, 1.3vw, 5px)/1.1 var(--ak-font-mono);
+    display: block;
+    width: 100%; max-width: 100%;
+    font: 400 8.5px/1.15 var(--ak-font-mono);
     color: var(--ak-muted);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     text-align: center;
+  }
+
+  html.ak-term-keyboard .ak-window[data-focus="true"] {
+    inset: 39px 0 0 0 !important;
+  }
+  html.ak-term-keyboard .ak-dock {
+    transform: translate3d(0, 110%, 0);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .term-wrap {
+    height: 100%;
+  }
+  .term-body {
+    padding: 12px 12px 8px;
+    font-size: 12.5px;
+    line-height: 1.75;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+  .term-quick {
+    display: flex;
+    gap: 6px;
+    flex: none;
+    overflow-x: auto;
+    padding: 7px 12px;
+    border-top: 1px solid var(--ak-line);
+    background: #0a0a0d;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .term-quick::-webkit-scrollbar { display: none; }
+  :root[data-theme="light"] .term-quick { background: #f7f5fc; }
+  .term-quick button {
+    flex: none;
+    min-height: 32px;
+    border: 1px solid var(--ak-line-2);
+    padding: 0 10px;
+    color: var(--ak-muted);
+    font: 400 12px/1 var(--ak-font-mono);
+  }
+  .term-quick button:active {
+    background: var(--ak-panel-2);
+    color: var(--ak-text);
+  }
+  .term-quick button:disabled {
+    opacity: .42;
+  }
+  .term-input-line {
+    align-items: center;
+    gap: 7px;
+    flex: none;
+    padding: 8px 12px calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--ak-line);
+    background: #0a0a0d;
+    font: 400 16px/1.35 var(--ak-font-mono);
+  }
+  :root[data-theme="light"] .term-input-line { background: #f7f5fc; }
+  .term-input-line input {
+    font-size: 16px;
+    line-height: 1.35;
   }
 }
 @media (prefers-reduced-motion: reduce) {

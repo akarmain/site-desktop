@@ -3,7 +3,7 @@
 # Тонкую настройку прод-деплоя (домен, TLS) делает отдельно деплой-агент (см. docs/deploy.md).
 services:
   web:
-    build: .
+    build: ./frontend
     ports:
       - "80:80"
     depends_on:

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
+import { genie, clearGenie, snapshotInto } from '~/composables/useGenie'
 
 defineOptions({ inheritAttrs: false })
 
@@ -10,7 +11,7 @@ const props = defineProps<{
   nopad?: boolean
 }>()
 
-const { wins, focusWin, closeWin, toggleMin, isInteracting } = useWindows()
+const { wins, focusWin, closeWin, minimize, minStack, dropMin, isInteracting } = useWindows()
 const win = computed(() => wins[props.winId])
 
 const el = ref<HTMLElement>()
@@ -48,6 +49,48 @@ function restore() {
 }
 
 defineExpose({ maximize, restore })
+
+// the window's preview tile in the dock tray
+function trayTile(): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`.ak-dock-min[data-win="${props.winId}"]`)
+}
+
+// minimize: spawn a tray preview, fly the live window into it, then hide the window
+async function onMinimize() {
+  if (win.value.min) return
+  // freeze the exact current rect into pos so restore comes back to the same
+  // place AND size (height is normally auto → pin it to px before hiding)
+  if (el.value) {
+    pos.left = el.value.offsetLeft + 'px'; pos.top = el.value.offsetTop + 'px'
+    pos.width = el.value.offsetWidth + 'px'; pos.height = el.value.offsetHeight + 'px'
+    moved.value = true   // never auto-center this window again
+  }
+  if (!minStack.value.includes(props.winId)) minStack.value.push(props.winId)
+  await nextTick()                       // tray tile now exists
+  const tile = trayTile()
+  if (el.value && tile) {
+    snapshotInto(tile, el.value)         // freeze current look into the tile
+    await genie(el.value, tile, 'out')
+    minimize(props.winId)                // sets min → v-show hides the window
+    await nextTick()
+    if (el.value) clearGenie(el.value)
+  } else {
+    minimize(props.winId)
+  }
+}
+
+// restore (openWin / tray click flips win.min false): fly back out of the tile, then drop it
+watch(() => win.value?.min, (now, before) => {
+  if (!before || now) return
+  nextTick(() => {
+    const tile = trayTile()
+    if (el.value && tile) {
+      genie(el.value, tile, 'in').then(() => { dropMin(props.winId); if (el.value) clearGenie(el.value) })
+    } else {
+      dropMin(props.winId)
+    }
+  })
+})
 
 function startDrag(e: MouseEvent) {
   if ((e.target as Element).closest('button')) return
@@ -141,7 +184,7 @@ watch(() => win.value?.closed, (now, before) => {
 
 <template>
   <section
-    v-show="!win.closed"
+    v-show="!win.closed && !win.min"
     ref="el"
     :class="['ak-window', 'ak-notch', animClass, { min: win.min, 'is-interacting': interacting }]"
     :data-focus="win.focused ? 'true' : 'false'"
@@ -151,7 +194,7 @@ watch(() => win.value?.closed, (now, before) => {
     <div class="ak-window__head" @mousedown="startDrag">
       <div class="ak-traffic">
         <button class="ak-traffic__btn close" :aria-label="$t('win_close')" @click.stop="closeWin(winId)" />
-        <button class="ak-traffic__btn minimize" :aria-label="win.min ? $t('win_restore') : $t('win_minimize')" @click.stop="toggleMin(winId)" />
+        <button class="ak-traffic__btn minimize" :aria-label="win.min ? $t('win_restore') : $t('win_minimize')" @click.stop="onMinimize" />
         <button class="ak-traffic__btn maximize" aria-label="maximize" @click.stop="beforeMaximize ? restore() : maximize()" />
       </div>
       <span class="ak-window__title">{{ title }}</span>

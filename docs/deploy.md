@@ -19,9 +19,10 @@ export COMPOSE_FILE="/var/www/akarmain.ru/docker-compose.yml"
 
 ## Обычный деплой
 
-Из корня проекта:
+Из `frontend/` (все команды этого раздела — оттуда):
 
 ```bash
+cd frontend
 pnpm install --frozen-lockfile
 pnpm generate
 ```
@@ -90,9 +91,9 @@ openssl s_client -connect old.akarmain.ru:443 -servername old.akarmain.ru </dev/
 
 Старая версия была PWA и могла кешировать `/projects` через service worker. Поэтому в новом сайте есть:
 
-- `public/sw.js`
-- `public/registerSW.js`
-- cleanup-скрипт в `nuxt.config.ts`
+- `frontend/public/sw.js`
+- `frontend/public/registerSW.js`
+- cleanup-скрипт в `frontend/nuxt.config.ts`
 
 На сервере для `/sw.js` и `/registerSW.js` в nginx стоит `Cache-Control: no-store`. Если браузер все еще показывает старый сайт, открыть `https://akarmain.ru/sw.js`, затем сделать `Cmd + Shift + R` или закрыть и открыть вкладку заново.
 

@@ -9,9 +9,11 @@ import { stack } from '~/data/stack'
 import { experience } from '~/data/experience'
 
 const { theme, toggleTheme } = useAkTheme()
-const { wins, openWin, closeWin, anyOpen } = useWindows()
+const { wins, openWin, closeWin, anyOpen, minStack } = useWindows()
+const winTitle = (id: string) => loc((windows.find(w => w.id === id) ?? windows[0]).title)
 const { locale, setLocale } = useI18n()
 const loc = useLoc()
+const { activeProject, selectProject } = useDeepLinks()
 
 const dockMain = windows.filter(w => w.id !== 'winSettings')
 
@@ -27,12 +29,26 @@ onMounted(() => {
 })
 onUnmounted(() => clearInterval(clockTick))
 
-// ── ambient: off on mobile / reduced-motion (canvas is the heaviest thing on the page) ──
-const enableAmbient = ref(false)
+// ── ambient: desktop always, mobile only for the empty pixel field ──
+const isMobileViewport = ref(false)
+const reduceMotion = ref(false)
+const enableAmbient = computed(() => !reduceMotion.value && (!isMobileViewport.value || !anyOpen.value))
+
+function syncAmbientPrefs() {
+  isMobileViewport.value = matchMedia('(max-width: 759px)').matches
+  reduceMotion.value = matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
 onMounted(() => {
-  // ponytail: evaluated once on mount — a mid-session resize across the breakpoint won't re-toggle it.
-  enableAmbient.value = !matchMedia('(max-width: 759px)').matches
-    && !matchMedia('(prefers-reduced-motion: reduce)').matches
+  syncAmbientPrefs()
+  document.documentElement.classList.add('akos-page-lock')
+  document.body.classList.add('akos-page-lock')
+  window.addEventListener('resize', syncAmbientPrefs, { passive: true })
+})
+onUnmounted(() => {
+  document.documentElement.classList.remove('akos-page-lock')
+  document.body.classList.remove('akos-page-lock')
+  window.removeEventListener('resize', syncAmbientPrefs)
 })
 
 // ── hint ──
@@ -74,12 +90,13 @@ function magnifyDock(e: MouseEvent) {
       const mag = d < 90 ? 1 + (1 - d / 90) * 0.42 : 1
       el.style.setProperty('--mag', mag.toFixed(3))
       el.style.transform = `scale(${mag.toFixed(3)})`
+      el.style.zIndex = String(Math.round(mag * 100)) // bigger = closer to cursor = on top
     }
   })
 }
 function resetDock() {
   dockEl.value?.querySelectorAll<HTMLElement>('button').forEach(btn => {
-    btn.style.setProperty('--mag', '1'); btn.style.transform = ''
+    btn.style.setProperty('--mag', '1'); btn.style.transform = ''; btn.style.zIndex = ''
   })
   dockBtnCache = [] // reset cache on leave so next enter re-reads positions
 }
@@ -176,7 +193,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleEsc))
       <!-- ~/проекты -->
       <AkDesktopWindow win-id="winWork" :title="loc(windows[1].title)" default-width="470px">
         <div class="files">
-          <a v-for="p in projects" :key="p.title.ru" class="file" :href="p.href" target="_blank" rel="noopener">
+          <a v-for="p in projects" :key="p.title.ru" class="file" :class="{ 'is-active': activeProject === p.slug }"
+             :href="p.href" target="_blank" rel="noopener" @click="selectProject(p.slug)">
             <AkIcon :name="p.icon" />
             <span class="nm"><b>{{ loc(p.title) }}</b><span>{{ loc(p.sub) }}</span></span>
             <span class="meta">{{ loc(p.meta) }}</span><span class="badge" :class="p.badge">{{ p.badge }}</span>
@@ -249,20 +267,34 @@ onUnmounted(() => window.removeEventListener('keydown', handleEsc))
 
     <!-- ── dock ── -->
     <div ref="dockEl" class="ak-dock ak-notch" @mousemove="magnifyDock" @mouseleave="resetDock">
-      <button v-for="w in dockMain" :key="w.id"
+      <button v-for="w in dockMain" :key="w.id" :data-win="w.id"
               :class="[dockCls(w.id), { 'ak-dock-attention': !anyOpen && w.id === 'winAbout' }]"
               :data-tip="loc(w.title)" :aria-label="loc(w.title)" @click="openWin(w.id)">
         <AkIcon :name="w.icon" />
         <span class="ak-dock__label">{{ loc(w.title) }}</span>
       </button>
       <span class="ak-dock-sep" />
-      <button :class="dockCls('winSettings')" :data-tip="loc(windows[6].title)" :aria-label="loc(windows[6].title)" @click="openWin('winSettings')">
+      <button data-win="winSettings" :class="dockCls('winSettings')" :data-tip="loc(windows[6].title)" :aria-label="loc(windows[6].title)" @click="openWin('winSettings')">
         <AkIcon name="win-settings" />
         <span class="ak-dock__label">{{ loc(windows[6].title) }}</span>
       </button>
+
+      <!-- свёрнутые окна — превью-плитки, клик возвращает окно;
+           tag-less TransitionGroup: плитки остаются прямыми детьми .ak-dock
+           (стили/плашка работают), а уход анимируется — док плавно сужается -->
+      <TransitionGroup name="docktile">
+        <span v-if="minStack.length" key="__sep" class="ak-dock-sep" />
+        <button v-for="id in minStack" :key="id" class="ak-dock-min" :data-win="id"
+                :data-tip="winTitle(id)" :aria-label="winTitle(id)" @click="openWin(id)" />
+      </TransitionGroup>
     </div>
 
     <!-- ── overlays ── -->
     <div class="hint" :style="{ opacity: hintOpacity }">{{ $t('hint') }}</div>
   </div>
 </template>
+
+<style scoped>
+/* deep-link: подсветка проекта из ?project= — только токены --ak-*, без сдвига разметки */
+.file.is-active { background: var(--ak-panel-2); box-shadow: inset 2px 0 0 var(--ak-accent); }
+</style>

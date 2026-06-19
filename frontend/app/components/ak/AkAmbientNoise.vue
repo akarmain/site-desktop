@@ -5,7 +5,7 @@ const canvas = ref<HTMLCanvasElement>()
 const isViewportResizing = ref(false)
 let rafId = 0
 let cleanupAmbient: (() => void) | undefined
-const { isInteracting } = useWindows()
+const { anyOpen, isInteracting } = useWindows()
 
 onMounted(() => {
   const c = canvas.value!
@@ -242,10 +242,31 @@ onMounted(() => {
   const onMouseMove = (e: MouseEvent) => { mouse.tx = e.clientX; mouse.ty = e.clientY }
   const onMouseLeave = () => { mouse.tx = -9999; mouse.ty = -9999 }
   const onMouseDown = (e: MouseEvent) => { if (e.button === 0) pulseAt(e.clientX, e.clientY, .7) }
+  const fieldTouch = (e: TouchEvent) => {
+    if (anyOpen.value) return
+    const target = e.target as Element | null
+    if (target?.closest('.ak-dock, .ak-menubar, button, a, input, textarea, select')) return
+    const touch = e.touches[0]
+    if (!touch) return
+    e.preventDefault()
+    mouse.tx = touch.clientX
+    mouse.ty = touch.clientY
+    return touch
+  }
+  const onTouchStart = (e: TouchEvent) => {
+    const touch = fieldTouch(e)
+    if (touch) pulseAt(touch.clientX, touch.clientY, .62)
+  }
+  const onTouchMove = (e: TouchEvent) => { fieldTouch(e) }
+  const onTouchEnd = () => { mouse.tx = -9999; mouse.ty = -9999 }
   addEventListener('resize', scheduleResize)
   addEventListener('mousemove', onMouseMove, { passive: true })
   addEventListener('mouseleave', onMouseLeave)
   addEventListener('mousedown', onMouseDown, { passive: true })
+  addEventListener('touchstart', onTouchStart, { passive: false })
+  addEventListener('touchmove', onTouchMove, { passive: false })
+  addEventListener('touchend', onTouchEnd, { passive: true })
+  addEventListener('touchcancel', onTouchEnd, { passive: true })
   rafId = requestAnimationFrame(paint)
 
   cleanupAmbient = () => {
@@ -255,6 +276,10 @@ onMounted(() => {
     removeEventListener('mousemove', onMouseMove)
     removeEventListener('mouseleave', onMouseLeave)
     removeEventListener('mousedown', onMouseDown)
+    removeEventListener('touchstart', onTouchStart)
+    removeEventListener('touchmove', onTouchMove)
+    removeEventListener('touchend', onTouchEnd)
+    removeEventListener('touchcancel', onTouchEnd)
     delete (window as any).akarmainAmbientPulse
   }
 })
