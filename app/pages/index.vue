@@ -253,10 +253,12 @@ onUnmounted(() => window.removeEventListener('keydown', handleEsc))
               :class="[dockCls(w.id), { 'ak-dock-attention': !anyOpen && w.id === 'winAbout' }]"
               :data-tip="loc(w.title)" :aria-label="loc(w.title)" @click="openWin(w.id)">
         <AkIcon :name="w.icon" />
+        <span class="ak-dock__label">{{ loc(w.title) }}</span>
       </button>
       <span class="ak-dock-sep" />
       <button :class="dockCls('winSettings')" :data-tip="loc(windows[6].title)" :aria-label="loc(windows[6].title)" @click="openWin('winSettings')">
         <AkIcon name="win-settings" />
+        <span class="ak-dock__label">{{ loc(windows[6].title) }}</span>
       </button>
     </div>
 

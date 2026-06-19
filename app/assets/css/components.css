@@ -21,6 +21,7 @@
   align-items: center;
   gap: 10px;
   padding: 8px 10px 8px 12px;
+  position: relative;
   font: 400 11.5px/1 var(--ak-font-mono);
   color: var(--ak-muted);
   border-bottom: 1px solid var(--ak-line);
@@ -166,7 +167,7 @@
 .ak-window__body--nopad { padding: 0; overflow: auto; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 /* traffic-light window buttons */
 .ak-traffic { display: flex; gap: 6px; align-items: center; flex: none; }
-.ak-traffic__btn { width: 10px; height: 10px; border-radius: 0; border: none; padding: 0; position: relative; transition: filter 120ms; }
+.ak-traffic__btn { width: 9px; height: 9px; border-radius: 0; border: none; padding: 0; position: relative; transition: filter 120ms; }
 .ak-traffic__btn.close    { background: #8b5c5c; }
 .ak-traffic__btn.minimize { background: #8b7e5c; }
 .ak-traffic__btn.maximize { background: #5c8b6a; }
@@ -180,7 +181,16 @@
 .ak-window:not([data-focus="true"]) .ak-traffic__btn { background: var(--ak-line-2); }
 .ak-window:not([data-focus="true"]) .ak-traffic__btn::after { display: none; }
 /* title centering */
-.ak-window__title { flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ak-window__title {
+  position: absolute;
+  left: 50%;
+  max-width: calc(100% - 104px);
+  transform: translateX(-50%);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 @keyframes winIn  { from { opacity: 0; transform: scale(.9) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 @keyframes winOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(.9) translateY(8px); } }
 .ak-window.anim-in  { animation: winIn  200ms cubic-bezier(.2,.9,.3,1.2); }
@@ -199,7 +209,13 @@
 .ak-win-edge.se:hover { background: linear-gradient(135deg, transparent 0 50%, var(--ak-accent) 50% 60%, transparent 60% 72%, var(--ak-accent) 72% 82%, transparent 82%); }
 
 /* ── dock: positioned + button internals ── */
-.ak-dock { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 500; clip-path: none; padding-bottom: 14px; }
+.ak-dock {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 500; clip-path: none; padding-bottom: 14px;
+  /* tweak the hover tooltip here */
+  --tip-font: 11px;       /* размер текста плашки */
+  --tip-pad: 3px 9px;     /* внутренние отступы */
+  --tip-gap: 9px;         /* зазор над иконкой */
+}
 .ak-dock > button {
   width: 54px; height: 54px; display: grid; place-items: center;
   position: relative; transition: background var(--ak-transition), transform 120ms cubic-bezier(.2,.9,.3,1.1);
@@ -235,9 +251,25 @@
 }
 .ak-dock > button.open::after { opacity: .82; }
 .ak-dock > button.mini::after { opacity: .42; }
+/* hover-плашка с названием окна (десктоп) */
 .ak-dock > button::before {
-  display: none;
+  content: attr(data-tip);
+  position: absolute; bottom: 100%; left: 50%;
+  margin-bottom: var(--tip-gap, 9px);
+  padding: var(--tip-pad, 3px 9px);
+  font: 400 var(--tip-font, 11px)/1.2 var(--ak-font-mono);
+  white-space: nowrap; color: var(--ak-text);
+  background: var(--ak-panel); border: 1px solid var(--ak-line);
+  opacity: 0; pointer-events: none;
+  /* counter the dock magnification so the plate keeps a constant size */
+  transform: translateX(-50%) scale(calc(1 / var(--mag, 1)));
+  transform-origin: bottom center;
+  transition: opacity 120ms ease;
 }
+.ak-dock > button:hover::before { opacity: 1; }
+
+/* постоянная подпись под иконкой (мобайл, скрыта на десктопе) */
+.ak-dock__label { display: none; }
 
 /* ── desktop icons: positioned ── */
 .ak-desktop-icons { position: fixed; top: 58px; right: 20px; z-index: 1; }
@@ -375,7 +407,7 @@
   .stage { position: static; }
   .ak-window {
     position: fixed !important;
-    inset: 39px 0 67px 0 !important;   /* под меню-баром (38px) и над доком (~66px) */
+    inset: 39px 0 72px 0 !important;   /* под меню-баром (38px) и над доком с подписями (~70px) */
     width: auto !important;
     height: auto !important;
     transform: none !important;
@@ -386,7 +418,7 @@
   .ak-window:not([data-focus="true"]) { display: none; }
   .ak-win-edge, .ak-desktop-icons, .hint, .buildtag { display: none; }
   .ak-window__head { cursor: default; }
-  .ak-traffic__btn { width: 16px; height: 16px; }  /* крупнее под палец */
+  .ak-traffic__btn { width: 14px; height: 14px; }  /* крупнее под палец */
 
   /* контактная карточка — в столбик, чтобы bento не уезжал по горизонтали */
   .contact-layout { flex-direction: column; }
@@ -402,8 +434,25 @@
     overflow-x: auto; justify-content: flex-start;
     -webkit-overflow-scrolling: touch;
   }
-  .ak-dock > button { flex: none; }
+  .ak-dock { padding-bottom: 6px; }
+  .ak-dock > button {
+    flex: none;
+    width: auto; height: auto; min-width: 54px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 4px 6px;
+    transform: none !important;        /* без увеличения при тапе */
+    animation: none !important;        /* без bounce-прыжка */
+  }
   .ak-dock > button::before { display: none; }  /* hover-тултипы не нужны на тач */
+  .ak-dock > button::after  { display: none; }  /* статус открыт/закрыт убираем */
+  /* постоянная подпись с названием окна, авто-уменьшение и обрезка по ширине */
+  .ak-dock__label {
+    display: block; max-width: 15ch;
+    font: 400 clamp(4px, 1.3vw, 5px)/1.1 var(--ak-font-mono);
+    color: var(--ak-muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    text-align: center;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .ak-window.anim-in, .ak-window.anim-out, .ak-dock > button.bounce, .ak-dock > button.ak-dock-attention .ak-px-icon { animation: none !important; }
