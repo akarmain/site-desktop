@@ -255,6 +255,7 @@ onMounted(() => {
     removeEventListener('mousemove', onMouseMove)
     removeEventListener('mouseleave', onMouseLeave)
     removeEventListener('mousedown', onMouseDown)
+    delete (window as any).akarmainAmbientPulse
   }
 })
 

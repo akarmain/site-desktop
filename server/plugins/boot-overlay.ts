@@ -35,9 +35,23 @@ const BOOT_CSS = `
 @media(prefers-reduced-motion:reduce){.akm-boot-window,#akm-boot{transition:none!important;animation:none!important}}
 `
 
-const BOOT_HTML = `<div id="akm-boot" aria-hidden="true"></div><div class="akm-boot-skip">клик — пропустить</div>`
+// Локализованные строки оверлея. Язык берётся из пути запроса (/en → en).
+const BOOT_STRINGS = {
+  ru: {
+    skip: 'клик — пропустить',
+    subtitle: 'v2.4 · монтирование',
+    lines: [['accent','init kernel'],['ok','[ ok ] ядро · дисциплина'],['accent','init filesystem'],['ok','[ ok ] фс · 19 проектов'],['ok','[ ok ] память · проверена'],['ok','[ ok ] службы · запущены'],['accent','load ui · рабочий стол…']],
+  },
+  en: {
+    skip: 'click to skip',
+    subtitle: 'v2.4 · mounting',
+    lines: [['accent','init kernel'],['ok','[ ok ] kernel · discipline'],['accent','init filesystem'],['ok','[ ok ] fs · 19 projects'],['ok','[ ok ] memory · checked'],['ok','[ ok ] services · up'],['accent','load ui · desktop…']],
+  },
+} as const
 
-const BOOT_JS = `(function(){
+const BOOT_HTML = (t: typeof BOOT_STRINGS['ru']) => `<div id="akm-boot" aria-hidden="true"></div><div class="akm-boot-skip">${t.skip}</div>`
+
+const BOOT_JS = (t: typeof BOOT_STRINGS['ru']) => `(function(){
   var o=document.getElementById('akm-boot');
   if(!o)return;
   var revealed=false,animDone=false,pageReady=false,timers=[];
@@ -53,9 +67,9 @@ const BOOT_JS = `(function(){
   o.addEventListener('click',reveal);
   function logo(s){return'<svg width="'+s+'" height="'+s+'" viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true"><rect x="3" y="0" width="1" height="1"/><rect x="2" y="1" width="3" height="1"/><rect x="1" y="2" width="5" height="1"/><rect x="0" y="3" width="7" height="1"/><rect x="1" y="4" width="5" height="1"/><rect x="2" y="5" width="3" height="1"/><rect x="3" y="6" width="1" height="1"/></svg>';}
   var t={line:220,block:95,flick:180,expand:240,revealGap:280};
-  var lines=[['accent','init kernel'],['ok','[ ok ] ядро · дисциплина'],['accent','init filesystem'],['ok','[ ok ] фс · 19 проектов'],['ok','[ ok ] память · проверена'],['ok','[ ok ] службы · запущены'],['accent','load ui · рабочий стол…']];
+  var lines=${JSON.stringify(t.lines)};
   var nb=14;
-  o.innerHTML='<div class="akm-boot-window-wrap"><div class="akm-boot-window" id="akm-bw"><div class="akm-boot-head"><span>boot.app</span><span class="akm-grow"></span><span class="akm-dot">—</span><span class="akm-dot">□</span><span class="akm-dot">×</span></div><div class="akm-boot-body"><div class="akm-boot-logo">'+logo(26)+'<div><b>akarmainOS</b><em>v2.4 · монтирование</em></div></div><div class="akm-boot-log" id="akm-log"></div><div class="akm-boot-progress"><span class="akm-boot-blocks" id="akm-bl"></span><span class="akm-boot-percent" id="akm-pct">0%</span></div></div></div></div>';
+  o.innerHTML='<div class="akm-boot-window-wrap"><div class="akm-boot-window" id="akm-bw"><div class="akm-boot-head"><span>boot.app</span><span class="akm-grow"></span><span class="akm-dot">—</span><span class="akm-dot">□</span><span class="akm-dot">×</span></div><div class="akm-boot-body"><div class="akm-boot-logo">'+logo(26)+'<div><b>akarmainOS</b><em>${t.subtitle}</em></div></div><div class="akm-boot-log" id="akm-log"></div><div class="akm-boot-progress"><span class="akm-boot-blocks" id="akm-bl"></span><span class="akm-boot-percent" id="akm-pct">0%</span></div></div></div></div>';
   var win=document.getElementById('akm-bw'),log=document.getElementById('akm-log'),bl=document.getElementById('akm-bl'),pct=document.getElementById('akm-pct');
   var blocks=[];for(var i=0;i<nb;i++){var b=document.createElement('i');bl.appendChild(b);blocks.push(b);}
   lines.forEach(function(item,idx){delay(function(cls,txt){var r=document.createElement('div');r.className=cls;r.textContent=txt;log.appendChild(r);}.bind(null,item[0],item[1]),idx*t.line);});
@@ -67,8 +81,10 @@ const BOOT_JS = `(function(){
 }());`
 
 export default defineNitroPlugin((nitroApp) => {
-  nitroApp.hooks.hook('render:html', (html) => {
+  nitroApp.hooks.hook('render:html', (html, { event }) => {
+    const path = event?.path ?? '/'
+    const t = path.startsWith('/en') ? BOOT_STRINGS.en : BOOT_STRINGS.ru
     html.head.push(`<style id="akm-boot-css">${BOOT_CSS}</style>`)
-    html.bodyPrepend.push(`${BOOT_HTML}<script>${BOOT_JS}<\/script>`)
+    html.bodyPrepend.push(`${BOOT_HTML(t)}<script>${BOOT_JS(t)}<\/script>`)
   })
 })

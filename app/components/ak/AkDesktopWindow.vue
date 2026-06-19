@@ -149,10 +149,12 @@ watch(() => win.value?.closed, (now, before) => {
     @mousedown="focusWin(winId)"
   >
     <div class="ak-window__head" @mousedown="startDrag">
-      <span>{{ title }}</span>
-      <span class="ak-dither grow" />
-      <button class="ak-window__wbtn" :aria-label="win.min ? 'Развернуть' : 'Свернуть'" @click.stop="toggleMin(winId)">{{ win.min ? '+' : '—' }}</button>
-      <button class="ak-window__wbtn" aria-label="Закрыть" @click.stop="closeWin(winId)">×</button>
+      <div class="ak-traffic">
+        <button class="ak-traffic__btn close" :aria-label="$t('win_close')" @click.stop="closeWin(winId)" />
+        <button class="ak-traffic__btn minimize" :aria-label="win.min ? $t('win_restore') : $t('win_minimize')" @click.stop="toggleMin(winId)" />
+        <button class="ak-traffic__btn maximize" aria-label="maximize" @click.stop="beforeMaximize ? restore() : maximize()" />
+      </div>
+      <span class="ak-window__title">{{ title }}</span>
     </div>
 
     <slot name="body">

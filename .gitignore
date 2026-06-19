@@ -9,6 +9,11 @@ dist
 # Node dependencies
 node_modules
 
+# Python (backend)
+.venv
+venv
+__pycache__
+
 # Logs
 logs
 *.log

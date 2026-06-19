@@ -1,0 +1,22 @@
+{
+  "settings_title": "Settings",
+  "profile_name": "Andrey Karmaev",
+  "hint": "drag windows by the title bar · resize from the corner · open from the dock",
+  "profile_role": "fullstack developer",
+  "profile_bio_1": "My life in «Meow» mode",
+  "profile_bio_strong": "From idea to production",
+  "profile_bio_tail": " — in days, not months.",
+  "profile_online": "online",
+  "more_links": "more links →",
+  "less_links": "← collapse",
+  "cfg_theme": "theme",
+  "cfg_theme_light": "light",
+  "cfg_theme_dark": "dark",
+  "cfg_lang": "language",
+  "cfg_lang_desc": "switch site language",
+  "cfg_lang_ru": "русский",
+  "cfg_lang_en": "english",
+  "win_restore": "Restore",
+  "win_minimize": "Minimize",
+  "win_close": "Close"
+}

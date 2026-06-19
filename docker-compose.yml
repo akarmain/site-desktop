@@ -1,0 +1,15 @@
+# Полный стек одной командой: docker compose up --build
+# Сайт → http://localhost,  здоровье API → http://localhost/api/health
+# Тонкую настройку прод-деплоя (домен, TLS) делает отдельно деплой-агент (см. docs/deploy.md).
+services:
+  web:
+    build: .
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+  api:
+    build: ./backend
+    expose:
+      - "8000"

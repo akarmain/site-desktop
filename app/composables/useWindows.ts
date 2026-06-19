@@ -1,21 +1,19 @@
 import { reactive, computed, ref } from 'vue'
+import { windows as WIN_DEFS } from '~/data/windows'
 
 interface WinState { closed: boolean; min: boolean; z: number; focused: boolean }
 
 // shared flag — set true during drag/resize so canvas skips expensive frames
 const isInteracting = ref(false)
 
-const wins = reactive<Record<string, WinState>>({
-  winAbout:    { closed: false, min: false, z: 30, focused: true },
-  winWork:     { closed: true,  min: false, z: 12, focused: false },
-  winStack:    { closed: true,  min: false, z: 13, focused: false },
-  winSvc:      { closed: true,  min: false, z: 14, focused: false },
-  winExp:      { closed: true,  min: false, z: 15, focused: false },
-  winTerm:     { closed: true,  min: false, z: 16, focused: false },
-  winSettings: { closed: true,  min: false, z: 20, focused: false },
-})
+// build initial state from the data registry (~/data/windows.ts)
+const wins = reactive<Record<string, WinState>>(
+  Object.fromEntries(
+    WIN_DEFS.map((w, i) => [w.id, { closed: !w.open, min: false, z: 12 + i, focused: !!w.open }])
+  )
+)
 
-let _z = 30
+let _z = Math.max(...WIN_DEFS.map((_, i) => 12 + i))
 
 function focusWin(id: string) {
   for (const k in wins) wins[k].focused = false

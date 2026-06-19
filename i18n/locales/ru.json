@@ -1,0 +1,22 @@
+{
+  "settings_title": "Настройки",
+  "profile_name": "Андрей Кармаев",
+  "hint": "окна можно таскать за заголовок · тянуть за угол · открывать в доке",
+  "profile_role": "fullstack-разработчик",
+  "profile_bio_1": "Моя жизнь в стиле «Мяу»",
+  "profile_bio_strong": "разработчик ",
+  "profile_bio_tail": "который помогает бизнесам решать проблемы при помощи грамотного управления ИИ",
+  "profile_online": "online",
+  "more_links": "ещё ссылки →",
+  "less_links": "← свернуть",
+  "cfg_theme": "тема",
+  "cfg_theme_light": "светлая",
+  "cfg_theme_dark": "тёмная",
+  "cfg_lang": "язык",
+  "cfg_lang_desc": "переключить язык сайта",
+  "cfg_lang_ru": "русский",
+  "cfg_lang_en": "english",
+  "win_restore": "Развернуть",
+  "win_minimize": "Свернуть",
+  "win_close": "Закрыть"
+}

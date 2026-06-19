@@ -22,3 +22,6 @@
   display: block;
   flex: none;
 }
+
+/* AkIcon wrapper — transparent to layout so parent selectors hit the inner <svg> */
+.ak-ico { display: contents; }

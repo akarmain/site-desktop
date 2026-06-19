@@ -26,13 +26,6 @@
   border-bottom: 1px solid var(--ak-line);
   flex: none;
 }
-.ak-window__head > span:first-child {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: none;
-  max-width: 70%;
-}
 .ak-window__body {
   padding: 18px 20px;
   overflow: auto;
@@ -148,8 +141,8 @@
   transform: translateY(-2px);
 }
 .ak-desktop-icon:active .ak-desktop-icon__box { transform: translateY(0) scale(.94); }
-.ak-desktop-icon span { font: 400 10.5px/1.4 var(--ak-font-mono); color: var(--ak-muted); }
-.ak-desktop-icon:hover span { color: var(--ak-text); }
+.ak-desktop-icon span { font: 400 9.5px/1.3 var(--ak-font-mono); color: var(--ak-muted); opacity: .45; }
+.ak-desktop-icon:hover span { opacity: .7; }
 
 /* ── terminal ── */
 .ak-terminal {
@@ -171,11 +164,23 @@
 .ak-window.min .ak-window__body--nopad { display: none; }
 .ak-window.min .ak-window__head { border-bottom: 0; }
 .ak-window__body--nopad { padding: 0; overflow: auto; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-.ak-window__head .grow { flex: 1; align-self: stretch; }
-.ak-window__head .grow.ak-dither { opacity: .3; }
-:root[data-theme="light"] .ak-window__head .grow.ak-dither { opacity: .14; }
-.ak-window__wbtn { color: var(--ak-dim); padding: 3px 6px; transition: color var(--ak-transition), background var(--ak-transition); font-size: 13px; line-height: 1; }
-.ak-window__wbtn:hover { color: var(--ak-text); background: var(--ak-panel-2); }
+/* traffic-light window buttons */
+.ak-traffic { display: flex; gap: 6px; align-items: center; flex: none; }
+.ak-traffic__btn { width: 10px; height: 10px; border-radius: 0; border: none; padding: 0; position: relative; transition: filter 120ms; }
+.ak-traffic__btn.close    { background: #8b5c5c; }
+.ak-traffic__btn.minimize { background: #8b7e5c; }
+.ak-traffic__btn.maximize { background: #5c8b6a; }
+/* icons on hover */
+.ak-traffic:hover .ak-traffic__btn::after { opacity: 1; }
+.ak-traffic__btn::after { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 120ms; background-size: 6px 6px; background-position: center; background-repeat: no-repeat; }
+.ak-traffic__btn.close::after    { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 6'%3E%3Cpath d='M.5.5l5 5M5.5.5l-5 5' stroke='%23261a1a' stroke-width='1' fill='none'/%3E%3C/svg%3E"); }
+.ak-traffic__btn.minimize::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 6'%3E%3Cpath d='M.5 3h5' stroke='%23261f0f' stroke-width='1' fill='none'/%3E%3C/svg%3E"); }
+.ak-traffic__btn.maximize::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 6'%3E%3Crect x='.5' y='.5' width='5' height='5' stroke='%230f2616' stroke-width='1' fill='none'/%3E%3C/svg%3E"); }
+/* unfocused — all grey */
+.ak-window:not([data-focus="true"]) .ak-traffic__btn { background: var(--ak-line-2); }
+.ak-window:not([data-focus="true"]) .ak-traffic__btn::after { display: none; }
+/* title centering */
+.ak-window__title { flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @keyframes winIn  { from { opacity: 0; transform: scale(.9) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 @keyframes winOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(.9) translateY(8px); } }
 .ak-window.anim-in  { animation: winIn  200ms cubic-bezier(.2,.9,.3,1.2); }
@@ -194,13 +199,13 @@
 .ak-win-edge.se:hover { background: linear-gradient(135deg, transparent 0 50%, var(--ak-accent) 50% 60%, transparent 60% 72%, var(--ak-accent) 72% 82%, transparent 82%); }
 
 /* ── dock: positioned + button internals ── */
-.ak-dock { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 500; }
+.ak-dock { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 500; clip-path: none; padding-bottom: 14px; }
 .ak-dock > button {
   width: 54px; height: 54px; display: grid; place-items: center;
   position: relative; transition: background var(--ak-transition), transform 120ms cubic-bezier(.2,.9,.3,1.1);
   transform-origin: bottom center;
 }
-.ak-dock > button:hover { background: var(--ak-panel-2); }
+.ak-dock > button:hover { background: transparent; }
 .ak-dock-sep { width: 1px; height: 34px; background: var(--ak-line-2); flex: none; margin: 0 4px; }
 @keyframes dockBounce {
   0%   { transform: translateY(0)    scale(var(--mag,1)); }
@@ -219,6 +224,7 @@
 .ak-dock > button.ak-dock-attention .ak-px-icon {
   animation: dockAttention 1.45s ease-in-out infinite;
   will-change: transform;
+  position: relative; z-index: 1;
 }
 .ak-dock > button.ak-dock-attention::before {
   opacity: 1;
@@ -230,21 +236,19 @@
 .ak-dock > button.open::after { opacity: .82; }
 .ak-dock > button.mini::after { opacity: .42; }
 .ak-dock > button::before {
-  content: attr(data-tip); position: absolute; bottom: calc(100% + 12px); left: 50%;
-  transform: translateX(-50%); white-space: nowrap;
-  background: var(--ak-panel-2); border: 1px solid var(--ak-line-2); color: var(--ak-text);
-  font: 400 10.5px/1 var(--ak-font-mono); padding: 6px 9px;
-  opacity: 0; pointer-events: none; transition: opacity var(--ak-transition);
+  display: none;
 }
-.ak-dock > button:hover::before { opacity: 1; }
 
 /* ── desktop icons: positioned ── */
 .ak-desktop-icons { position: fixed; top: 58px; right: 20px; z-index: 1; }
 
 /* ── menubar: positioned + extras ── */
 .ak-menubar { position: fixed; top: 0; left: 0; right: 0; z-index: 500; }
-.ak-menubar__brand-mark { width: 18px; height: 18px; border: 1px solid var(--ak-line-2); background: var(--ak-bg); display: grid; place-items: center; overflow: hidden; flex: none; }
-.ak-menubar__brand-mark img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ak-menubar__brand-mark { width: 18px; height: 18px; flex: none; position: relative; }
+.ak-menubar__brand-mark img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.ak-logo-hover { position: absolute; inset: 0; opacity: 0; }
+.ak-menubar__logo:hover .ak-logo-hover { opacity: 1; }
+.ak-menubar__logo:hover .ak-logo-default { opacity: 0; }
 .ak-settings-gear { width: 28px; height: 28px; border: 1px solid var(--ak-line); display: grid; place-items: center; }
 .ak-settings-gear:hover { border-color: var(--ak-line-2); background: var(--ak-panel-2); }
 .ak-settings-gear svg { width: 15px; height: 15px; display: block; }
@@ -258,7 +262,7 @@
 .contact-profile { flex: none; width: 100%; padding: 4px 0 0; display: flex; flex-direction: column; align-items: center; text-align: center; transition: width var(--ak-transition) ease; }
 .contact-profile.expanded { width: 280px; border-right: 1px solid var(--ak-line); padding-right: 16px; }
 .profile-hero { position: relative; margin-bottom: 16px; }
-.avatar-wrap { position: relative; width: 96px; height: 96px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 2px var(--ak-accent), 0 0 24px rgba(139,126,248,.35), 0 8px 32px rgba(0,0,0,.4); animation: avatarPulse 3s ease-in-out infinite; }
+.avatar-wrap { position: relative; width: 96px; height: 96px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 2px var(--ak-accent), 0 0 24px rgba(139,126,248,.35), 0 8px 32px rgba(0,0,0,.4)}
 @keyframes avatarPulse {
   0%, 100% { box-shadow: 0 0 0 2px var(--ak-accent), 0 0 24px rgba(139,126,248,.35), 0 8px 32px rgba(0,0,0,.4); }
   50%       { box-shadow: 0 0 0 3px var(--ak-accent), 0 0 40px rgba(139,126,248,.55), 0 8px 32px rgba(0,0,0,.4); }
@@ -362,14 +366,44 @@
 .cfg-choice button:hover { color: var(--ak-text); background: var(--ak-panel-2); }
 .cfg-choice button.on { color: var(--ak-accent); border-color: rgba(139,126,248,.45); background: rgba(139,126,248,.1); }
 
-/* ── responsive ── */
-@media (max-width: 760px) {
-  .ak-window { position: static !important; margin: 12px; width: auto !important; height: auto !important; }
+/* chrome pixel icons — sized here (AkIcon svgs carry no width/height) */
+.ak-dock .ak-px-icon { width: 32px; height: 32px; }
+.ak-desktop-icon .ak-px-icon { width: 26px; height: 26px; }
+
+/* ── responsive: phone = одно полноэкранное окно за раз, док — переключатель ── */
+@media (max-width: 759px) {
+  .stage { position: static; }
+  .ak-window {
+    position: fixed !important;
+    inset: 39px 0 67px 0 !important;   /* под меню-баром (38px) и над доком (~66px) */
+    width: auto !important;
+    height: auto !important;
+    transform: none !important;
+    border-left: 0; border-right: 0;
+    clip-path: none;                    /* notch не нужен на фуллскрине */
+  }
+  /* показываем только сфокусированное окно (открытие окна его фокусит) */
+  .ak-window:not([data-focus="true"]) { display: none; }
   .ak-win-edge, .ak-desktop-icons, .hint, .buildtag { display: none; }
   .ak-window__head { cursor: default; }
-  .stage { padding: 50px 0 90px; }
-  .ak-dock { max-width: calc(100vw - 20px); overflow-x: auto; justify-content: flex-start; }
+  .ak-traffic__btn { width: 16px; height: 16px; }  /* крупнее под палец */
+
+  /* контактная карточка — в столбик, чтобы bento не уезжал по горизонтали */
+  .contact-layout { flex-direction: column; }
+  .contact-profile.expanded { width: 100%; border-right: 0; border-bottom: 1px solid var(--ak-line); padding-right: 0; padding-bottom: 16px; }
+  .bento-panel { padding: 16px 0 0; }
+
+  /* док — нижняя панель-переключатель на всю ширину, со скроллом */
+  .ak-dock {
+    left: 0; right: 0; bottom: 0;
+    transform: none; width: 100%; max-width: 100%;
+    border-left: 0; border-right: 0; border-bottom: 0;
+    clip-path: none;
+    overflow-x: auto; justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+  }
   .ak-dock > button { flex: none; }
+  .ak-dock > button::before { display: none; }  /* hover-тултипы не нужны на тач */
 }
 @media (prefers-reduced-motion: reduce) {
   .ak-window.anim-in, .ak-window.anim-out, .ak-dock > button.bounce, .ak-dock > button.ak-dock-attention .ak-px-icon { animation: none !important; }
